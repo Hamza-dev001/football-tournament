@@ -16,6 +16,48 @@ def home():
     return render_template("home.html", groups=groups)
 
 # ==========================================================
+# SETUP (INITIALIZE DATABASE)
+# ==========================================================
+@main.route("/setup")
+def setup():
+
+    Match.query.delete()
+    Team.query.delete()
+    Group.query.delete()
+    db.session.commit()
+
+    group_names = ["Group A", "Group B", "Group C", "Group D", "Group E"]
+    groups = []
+
+    for name in group_names:
+        group = Group(name=name)
+        db.session.add(group)
+        db.session.flush()
+        groups.append(group)
+
+    teams = [
+        "TrippleA Bayern","67MERLIN Santos FC","Don Wizziy Dortmund",
+        "Titanboot Liverpool","Blaze Barcelona","Yhomide Real Madrid",
+        "Adegel Chelsea","Babson AC Milan","Qulialau Internet Miami",
+        "Asmev Manchester United","Ariyo Kashim Alters",
+        "Diceyguy Newcastle","Oyee Man City","Obamz Sheffield",
+        "Stay Motivated PSG","Sufas Al Nassr","Danify Arsenal",
+        "Khalil Inter Miami","Wylie Botafogo","Drex Juventus"
+    ]
+
+    random.shuffle(teams)
+
+    index = 0
+    for group in groups:
+        for _ in range(4):
+            db.session.add(Team(name=teams[index], group=group))
+            index += 1
+
+    db.session.commit()
+
+    return "✅ Groups Created Successfully!"
+
+# ==========================================================
 # GROUP FIXTURES (WITH MATCHDAYS)
 # ==========================================================
 @main.route("/group-fixtures")
@@ -256,9 +298,6 @@ def final():
     matches = Match.query.filter_by(stage="final").all()
     return render_template("final_celebration.html", matches=matches)
 
-# ==========================================================
-# BRACKET (FULL DATA PASSED)
-# ==========================================================
 @main.route("/bracket")
 def bracket():
 
