@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2 class="text-center mb-4">🏆 Tournament Bracket</h2>
+
+<div class="row text-white">
+
+    <!-- R16 -->
+    <div class="col-md-2">
+        <h5>Round of 16</h5>
+        {% for match in r16_matches %}
+            <div class="mb-2">
+                {{ match.home_team.name }} vs {{ match.away_team.name }}
+            </div>
+        {% else %}
+            <div>No matches</div>
+        {% endfor %}
+    </div>
+
+    <!-- Quarter -->
+    <div class="col-md-2">
+        <h5>Quarterfinal</h5>
+        {% for match in quarter_matches %}
+            <div class="mb-2">
+                {{ match.home_team.name }} vs {{ match.away_team.name }}
+            </div>
+        {% else %}
+            <div>No matches</div>
+        {% endfor %}
+    </div>
+
+    <!-- Semi -->
+    <div class="col-md-2">
+        <h5>Semifinal</h5>
+        {% for match in semi_matches %}
+            <div class="mb-2">
+                {{ match.home_team.name }} vs {{ match.away_team.name }}
+            </div>
+        {% else %}
+            <div>No matches</div>
+        {% endfor %}
+    </div>
+
+    <!-- Final -->
+    <div class="col-md-3">
+        <h5>Final</h5>
+        {% for match in final_matches %}
+            <div class="mb-2">
+                <strong>{{ match.home_team.name }} vs {{ match.away_team.name }}</strong>
+            </div>
+        {% else %}
+            <div>No final yet</div>
+        {% endfor %}
+    </div>
+
+    <!-- Third -->
+    <div class="col-md-3">
+        <h5>Third Place</h5>
+        {% for match in third_matches %}
+            <div class="mb-2">
+                {{ match.home_team.name }} vs {{ match.away_team.name }}
+            </div>
+        {% else %}
+            <div>No third place yet</div>
+        {% endfor %}
+    </div>
+
+</div>
+
+{% endblock %}

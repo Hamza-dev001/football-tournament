@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+.admin-card {
+    background: #111;
+    border: 1px solid #00f2ff44;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 25px;
+}
+
+.match-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    color: white;
+}
+
+.match-row strong {
+    color: #00f2ff;
+}
+
+.score-input {
+    width: 70px;
+    text-align: center;
+    background-color: #222;
+    color: white;
+    border: 1px solid #00f2ff44;
+}
+
+.score-input:focus {
+    outline: none;
+    box-shadow: 0 0 6px #00f2ff;
+}
+</style>
+
+<h2 class="mb-4">⚙ Admin Dashboard (Bulk Score Entry)</h2>
+
+<form method="POST" action="/admin/bulk-update">
+
+    {% for stage, matches in data.items() %}
+
+        <div class="admin-card">
+            <h4>{{ stage|upper }}</h4>
+
+            {% for match in matches %}
+
+                <div class="match-row">
+
+                    <div style="width: 30%;">
+                        <strong>{{ match.home_team.name }}</strong>
+                    </div>
+
+                    <div>
+                        <input type="number"
+                               name="home_{{ match.id }}"
+                               value="{{ match.home_score or '' }}"
+                               class="score-input">
+                    </div>
+
+                    <div style="margin: 0 10px;">
+                        vs
+                    </div>
+
+                    <div>
+                        <input type="number"
+                               name="away_{{ match.id }}"
+                               value="{{ match.away_score or '' }}"
+                               class="score-input">
+                    </div>
+
+                    <div style="width: 30%; text-align: right;">
+                        <strong>{{ match.away_team.name }}</strong>
+                    </div>
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    {% endfor %}
+
+    <button type="submit" class="btn btn-dark">
+        ✅ Save All Scores
+    </button>
+
+</form>
+
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2 class="text-center mb-4">📊 Group Standings</h2>
+
+{% for item in standings_data %}
+
+<div class="card p-4 mb-4">
+
+    <h4 class="mb-3" style="color:#00f2ff;">
+        {{ item.group.name }}
+    </h4>
+
+    <div class="table-responsive">
+        <table class="table table-dark table-bordered text-center align-middle">
+
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Team</th>
+                    <th>P</th>
+                    <th>W</th>
+                    <th>D</th>
+                    <th>L</th>
+                    <th>GF</th>
+                    <th>GA</th>
+                    <th>GD</th>
+                    <th>Pts</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for team in item.table %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ team.team.name }}</td>
+                    <td>{{ team.played }}</td>
+                    <td>{{ team.wins }}</td>
+                    <td>{{ team.draws }}</td>
+                    <td>{{ team.losses }}</td>
+                    <td>{{ team.gf }}</td>
+                    <td>{{ team.ga }}</td>
+                    <td>{{ team.gd }}</td>
+                    <td><strong>{{ team.points }}</strong></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+
+        </table>
+    </div>
+
+</div>
+
+{% endfor %}
+
+{% endblock %}

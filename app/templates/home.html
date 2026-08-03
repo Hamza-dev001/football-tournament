@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2 class="text-center mb-4">⚽ Tournament Groups</h2>
+
+<div class="row">
+    {% for group in groups %}
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white">
+                <strong>{{ group.name }}</strong>
+            </div>
+            <ul class="list-group list-group-flush">
+                {% for team in group.teams %}
+                <li class="list-group-item">
+                    {{ team.name }}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% endblock %}

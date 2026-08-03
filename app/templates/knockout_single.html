@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+.stage-title {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.match-card {
+    background: linear-gradient(135deg, #1e1e1e, #333);
+    color: white;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 12px;
+    text-align: center;
+    transition: transform 0.2s ease;
+}
+
+.match-card:hover {
+    transform: scale(1.03);
+}
+
+.champion {
+    background: linear-gradient(135deg, gold, orange);
+    color: black;
+    font-weight: bold;
+    animation: glow 1.5s infinite alternate;
+}
+
+@keyframes glow {
+    from { box-shadow: 0 0 10px gold; }
+    to { box-shadow: 0 0 25px orange; }
+}
+
+.trophy {
+    font-size: 40px;
+    margin-bottom: 10px;
+    animation: bounce 1s infinite alternate;
+}
+
+@keyframes bounce {
+    from { transform: translateY(0); }
+    to { transform: translateY(-10px); }
+}
+</style>
+
+<h2 class="stage-title">{{ title }}</h2>
+
+{% if matches|length == 0 %}
+    <p class="text-center text-muted">Not generated yet.</p>
+{% endif %}
+
+{% for match in matches %}
+
+    {% set is_final = (title == "Final") %}
+    {% set is_completed = match.is_completed %}
+    {% set winner = None %}
+
+    {% if is_completed %}
+        {% if match.home_score > match.away_score %}
+            {% set winner = match.home_team.name %}
+        {% elif match.away_score > match.home_score %}
+            {% set winner = match.away_team.name %}
+        {% endif %}
+    {% endif %}
+
+    <div class="match-card {% if is_final and is_completed %}champion{% endif %}">
+
+        {% if is_final and is_completed %}
+            <div class="trophy">🏆</div>
+            <div>CHAMPION</div>
+        {% endif %}
+
+        <strong>{{ match.home_team.name }}</strong>
+
+        {% if match.is_completed %}
+            {{ match.home_score }} - {{ match.away_score }}
+        {% else %}
+            vs
+        {% endif %}
+
+        <strong>{{ match.away_team.name }}</strong>
+
+        {% if is_final and is_completed %}
+            <div class="mt-2">
+                Winner: {{ winner }}
+            </div>
+        {% endif %}
+
+    </div>
+
+{% endfor %}
+
+{% endblock %}

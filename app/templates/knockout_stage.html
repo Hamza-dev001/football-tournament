@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2 class="text-center mb-4">🏆 Semifinal</h2>
+
+{% if matches %}
+<div class="card p-4">
+    {% for match in matches %}
+        <div class="mb-4 text-center" style="font-size: 18px; color: white;">
+            <strong>{{ match.home_team.name }}</strong>
+            {% if match.is_completed %}
+                {{ match.home_score }} - {{ match.away_score }}
+            {% else %}
+                vs
+            {% endif %}
+            <strong>{{ match.away_team.name }}</strong>
+        </div>
+    {% endfor %}
+</div>
+{% else %}
+<p class="text-center text-muted">Not generated yet.</p>
+{% endif %}
+
+{% endblock %}
