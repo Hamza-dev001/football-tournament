@@ -2,24 +2,94 @@
 
 {% block content %}
 
-<h2 class="text-center mb-4">🏆 Final</h2>
+<style>
+body {
+    background: radial-gradient(circle at center, #2b1d00 0%, #000 70%);
+}
+
+.final-card {
+    background: #111;
+    padding: 25px;
+    border-radius: 15px;
+    text-align: center;
+    margin-top: 30px;
+    box-shadow: 0 0 25px gold;
+}
+
+.champion-banner {
+    font-size: 45px;
+    font-weight: bold;
+    margin-top: 25px;
+    color: gold;
+    text-shadow: 0 0 20px gold;
+    animation: glow 1.5s infinite alternate;
+}
+
+@keyframes glow {
+    from { text-shadow: 0 0 10px gold; }
+    to   { text-shadow: 0 0 35px orange; }
+}
+
+.score-line {
+    font-size: 22px;
+    margin-top: 10px;
+    color: white;
+}
+</style>
+
+<h2 class="text-center mb-4">🏆 GRAND FINAL 🏆</h2>
 
 {% if matches %}
-<div class="card p-4">
     {% for match in matches %}
-        <div class="mb-4 text-center" style="font-size: 20px; color: white;">
-            <strong>{{ match.home_team.name }}</strong>
+
+        <div class="final-card">
+
+            <div class="score-line">
+                <strong>{{ match.home_team.name }}</strong>
+                {% if match.is_completed %}
+                    {{ match.home_score }} - {{ match.away_score }}
+                {% else %}
+                    vs
+                {% endif %}
+                <strong>{{ match.away_team.name }}</strong>
+            </div>
+
             {% if match.is_completed %}
-                {{ match.home_score }} - {{ match.away_score }}
-            {% else %}
-                vs
+
+                {% if match.home_score > match.away_score %}
+                    {% set champion = match.home_team.name %}
+                {% else %}
+                    {% set champion = match.away_team.name %}
+                {% endif %}
+
+                <div class="champion-banner">
+                    🥇 {{ champion }} IS THE CHAMPION! 🥇
+                </div>
+
+                <!-- Victory Sound -->
+                <audio autoplay>
+                    <source src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_7bda82e13b.mp3?filename=victory-fanfare-6875.mp3" type="audio/mpeg">
+                </audio>
+
+                <!-- Confetti Script -->
+                <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+                <script>
+                    setTimeout(function() {
+                        confetti({
+                            particleCount: 200,
+                            spread: 100,
+                            origin: { y: 0.6 }
+                        });
+                    }, 500);
+                </script>
+
             {% endif %}
-            <strong>{{ match.away_team.name }}</strong>
+
         </div>
+
     {% endfor %}
-</div>
 {% else %}
-<p class="text-center text-muted">Final not generated yet.</p>
+    <p class="text-center text-muted">Final not generated yet.</p>
 {% endif %}
 
 {% endblock %}
