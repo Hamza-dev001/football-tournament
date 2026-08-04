@@ -17,13 +17,13 @@
 
         .navbar {
             background: linear-gradient(90deg, #000, #111);
-            box-shadow: 0 0 10px #00f2ff;
+            box-shadow: 0 0 12px #00f2ff;
         }
 
         .navbar-brand {
             font-weight: bold;
             color: #00f2ff !important;
-            text-shadow: 0 0 5px #00f2ff;
+            text-shadow: 0 0 6px #00f2ff;
         }
 
         .nav-link {
@@ -39,7 +39,7 @@
         .rules-link {
             color: #00f2ff !important;
             font-weight: bold;
-            text-shadow: 0 0 6px #00f2ff;
+            text-shadow: 0 0 8px #00f2ff;
         }
 
         .card {
@@ -49,21 +49,45 @@
             border-radius: 12px;
         }
 
-        .card-header {
-            background: #111 !important;
-            color: #00f2ff !important;
-            font-weight: bold;
-        }
-
-        h2, h4 {
+        h2, h4, h5 {
             color: #00f2ff;
             text-shadow: 0 0 6px #00f2ff;
         }
 
-        /* ✅ TOP 2 QUALIFICATION HIGHLIGHT */
+        /* ✅ TOP 2 QUALIFICATION */
         .qualified-row {
             background-color: rgba(0, 255, 120, 0.15) !important;
             border-left: 4px solid #00ff88;
+        }
+
+        /* ✅ COUNTDOWN STYLES */
+        .countdown-normal {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #ffc107;
+            text-shadow: 0 0 10px #ffc107;
+        }
+
+        .countdown-danger {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #ff3b3b;
+            text-shadow: 0 0 15px #ff0000;
+            animation: flash 1s infinite alternate;
+        }
+
+        @keyframes flash {
+            from { opacity: 1; }
+            to { opacity: 0.4; }
+        }
+
+        .deadline-banner {
+            background: #ff0000;
+            color: white;
+            font-weight: bold;
+            padding: 8px;
+            border-radius: 8px;
+            animation: flash 1s infinite alternate;
         }
 
     </style>
@@ -100,30 +124,6 @@
 
                 <li class="nav-item">
                     <a class="nav-link rules-link" href="{{ url_for('main.rules') }}">Rules</a>
-                </li>
-
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('main.r16') }}">Round of 16</a>
-                </li>
-
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('main.quarterfinal') }}">Quarterfinal</a>
-                </li>
-
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('main.semifinal') }}">Semifinal</a>
-                </li>
-
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('main.third_place') }}">Third Place</a>
-                </li>
-
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('main.final') }}">Final</a>
-                </li>
-
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('main.bracket') }}">Bracket</a>
                 </li>
 
                 <li class="nav-item">
