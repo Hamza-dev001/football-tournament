@@ -3,15 +3,14 @@
 
 <h2 class="mb-4">⚙ Admin Dashboard</h2>
 
-{% if deadline_locked %}
-<div class="alert alert-danger">
-    🔒 Deadline has passed. Score updates are locked.
+<div class="alert alert-info">
+    📅 Current Matchday (System Calculated): 
+    <strong>{{ current_matchday }}</strong>
 </div>
-{% endif %}
 
 {% if override_active %}
 <div class="alert alert-warning">
-    👑 Deadline Override is ACTIVE.
+    👑 Deadline Override is ACTIVE
 </div>
 {% endif %}
 
@@ -42,7 +41,7 @@
                            value="{{ match.home_score if match.home_score is not none else '' }}"
                            class="form-control text-center"
                            style="width:80px;"
-                           {% if deadline_locked and not override_active %}disabled{% endif %}>
+                           {% if match.stage == 'group' and match.matchday < current_matchday and not override_active %}disabled{% endif %}>
 
                     <span>vs</span>
 
@@ -51,7 +50,7 @@
                            value="{{ match.away_score if match.away_score is not none else '' }}"
                            class="form-control text-center"
                            style="width:80px;"
-                           {% if deadline_locked and not override_active %}disabled{% endif %}>
+                           {% if match.stage == 'group' and match.matchday < current_matchday and not override_active %}disabled{% endif %}>
 
                     <strong style="width:30%; text-align:right;">
                         {{ match.away_team.name }}
@@ -65,8 +64,7 @@
 
     {% endfor %}
 
-    <button type="submit" class="btn btn-success"
-        {% if deadline_locked and not override_active %}disabled{% endif %}>
+    <button type="submit" class="btn btn-success">
         ✅ Save All Scores
     </button>
 

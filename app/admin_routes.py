@@ -6,8 +6,8 @@ from datetime import datetime
 
 admin = Blueprint("admin", __name__)
 
-# ✅ TOURNAMENT START DATE
-TOURNAMENT_START = datetime(2025, 8, 4, 10, 0, 0)  # August 4, 10:00 AM
+# ✅ TOURNAMENT START DATE (VERY IMPORTANT)
+TOURNAMENT_START = datetime(2025, 8, 4, 10, 0, 0)  # Adjust year if needed
 
 
 # ==========================================================
@@ -15,7 +15,6 @@ TOURNAMENT_START = datetime(2025, 8, 4, 10, 0, 0)  # August 4, 10:00 AM
 # ==========================================================
 
 def get_current_matchday():
-
     now = datetime.now()
 
     if now < TOURNAMENT_START:
@@ -26,7 +25,7 @@ def get_current_matchday():
 
     current_matchday = days_passed + 1
 
-    # Group stage has only 3 matchdays
+    # Group stage has 3 matchdays
     if current_matchday > 3:
         current_matchday = 3
 
@@ -34,18 +33,18 @@ def get_current_matchday():
 
 
 # ==========================================================
-# CHECK IF MATCHDAY IS LOCKED
+# CHECK IF MATCH IS LOCKED
 # ==========================================================
 
 def is_match_locked(matchday):
 
-    # If override active → allow
+    # Admin override bypass
     if session.get("override_deadline"):
         return False
 
     current_matchday = get_current_matchday()
 
-    # Lock previous matchdays only
+    # Lock only previous matchdays
     return matchday < current_matchday
 
 
@@ -109,7 +108,7 @@ def dashboard():
 
 
 # ==========================================================
-# BULK UPDATE
+# BULK SCORE UPDATE
 # ==========================================================
 
 @admin.route("/bulk-update", methods=["POST"])
@@ -120,7 +119,7 @@ def bulk_update():
 
     for match in matches:
 
-        # ✅ Lock only previous matchdays
+        # Lock only previous matchdays
         if match.stage == "group" and is_match_locked(match.matchday):
             continue
 

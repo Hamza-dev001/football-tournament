@@ -6,15 +6,22 @@
 
 <!-- ✅ COUNTDOWN CARD -->
 <div class="card text-center p-4 mb-4">
-    <h5>⏳ Matchday Deadline Countdown</h5>
+
+    <h5 style="color:#00f2ff; text-shadow:0 0 6px #00f2ff;">
+        ⏳ Matchday Deadline Countdown
+    </h5>
+
     <div id="countdownTimer"
-         style="font-size: 2.5rem; font-weight: bold; color: white; text-shadow: 0 0 15px #00f2ff;">
+         style="font-size:2.5rem; font-weight:bold; color:white; text-shadow:0 0 15px #00f2ff;">
         Loading...
     </div>
 
     <div id="deadlineBanner"></div>
 
-    <small>Deadline resets daily at 10:00 AM</small>
+    <div style="margin-top:8px; font-weight:bold; color:#ffc107; text-shadow:0 0 8px #ffc107;">
+        🕙 Deadline resets daily at 10:00 AM
+    </div>
+
 </div>
 
 <!-- ✅ SOUND -->
@@ -26,12 +33,17 @@
 
 <div class="card p-4 mb-4">
 
-    <h4 class="mb-3">{{ item.group.name }}</h4>
+    <h4 class="mb-3" style="color:#00f2ff;">
+        {{ item.group.name }}
+    </h4>
 
     {% for matchday, matches in item.matchdays.items() %}
 
     <div class="mb-3">
-        <h5 style="color:#ffc107;">Matchday {{ matchday }}</h5>
+
+        <h5 style="color:#ffc107;">
+            Matchday {{ matchday }}
+        </h5>
 
         <ul class="list-group list-group-flush">
 
@@ -58,6 +70,7 @@
             {% endfor %}
 
         </ul>
+
     </div>
 
     {% endfor %}
@@ -68,6 +81,7 @@
 
 <!-- ✅ COUNTDOWN SCRIPT -->
 <script>
+
 let alarmPlayed = false;
 
 function updateCountdown() {
@@ -93,6 +107,7 @@ function updateCountdown() {
     if (diff <= 0) {
         timer.innerHTML = "🚨 DEADLINE REACHED!";
         timer.style.color = "red";
+        timer.style.textShadow = "0 0 15px red";
         banner.innerHTML = "<div style='background:red; padding:8px; font-weight:bold;'>DEADLINE CLOSED</div>";
         return;
     }
@@ -103,7 +118,7 @@ function updateCountdown() {
 
     timer.innerHTML = hours + "h " + minutes + "m " + seconds + "s";
 
-    // ✅ Last 1 hour → turn red
+    // ✅ Last 1 hour → red glow
     if (diff <= 60 * 60 * 1000) {
         timer.style.color = "red";
         timer.style.textShadow = "0 0 15px red";
@@ -122,20 +137,23 @@ function updateCountdown() {
             alarm.play();
             alarmPlayed = true;
         }
+
     } else {
         banner.innerHTML = "";
     }
+
 }
 
 setInterval(updateCountdown, 1000);
 updateCountdown();
+
 </script>
 
 <style>
 @keyframes blink {
-    0% {opacity: 1;}
-    50% {opacity: 0.4;}
-    100% {opacity: 1;}
+    0% { opacity: 1; }
+    50% { opacity: 0.4; }
+    100% { opacity: 1; }
 }
 </style>
 
