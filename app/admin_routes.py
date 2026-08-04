@@ -6,26 +6,47 @@ from datetime import datetime
 
 admin = Blueprint("admin", __name__)
 
+# ✅ TOURNAMENT START DATE
+TOURNAMENT_START = datetime(2025, 8, 4, 10, 0, 0)  # August 4, 10:00 AM
+
+
 # ==========================================================
-# DEADLINE CHECK
+# CALCULATE CURRENT MATCHDAY
 # ==========================================================
 
-def deadline_passed():
+def get_current_matchday():
+
+    now = datetime.now()
+
+    if now < TOURNAMENT_START:
+        return 1
+
+    diff = now - TOURNAMENT_START
+    days_passed = diff.days
+
+    current_matchday = days_passed + 1
+
+    # Group stage has only 3 matchdays
+    if current_matchday > 3:
+        current_matchday = 3
+
+    return current_matchday
+
+
+# ==========================================================
+# CHECK IF MATCHDAY IS LOCKED
+# ==========================================================
+
+def is_match_locked(matchday):
+
     # If override active → allow
     if session.get("override_deadline"):
         return False
 
-    now = datetime.now()
+    current_matchday = get_current_matchday()
 
-    # Matchday runs from 10AM → next 10AM
-    today_10am = now.replace(hour=10, minute=0, second=0, microsecond=0)
-
-    if now >= today_10am:
-        deadline = today_10am.replace(day=today_10am.day + 1)
-    else:
-        deadline = today_10am
-
-    return now >= deadline
+    # Lock previous matchdays only
+    return matchday < current_matchday
 
 
 # ==========================================================
@@ -73,6 +94,8 @@ def dashboard():
     stages = ["group", "r16", "quarter", "semi", "third", "final"]
     data = {}
 
+    current_matchday = get_current_matchday()
+
     for stage in stages:
         matches = Match.query.filter_by(stage=stage).all()
         data[stage] = matches
@@ -80,7 +103,7 @@ def dashboard():
     return render_template(
         "admin_dashboard.html",
         data=data,
-        deadline_locked=deadline_passed(),
+        current_matchday=current_matchday,
         override_active=session.get("override_deadline", False)
     )
 
@@ -93,12 +116,14 @@ def dashboard():
 @login_required
 def bulk_update():
 
-    if deadline_passed():
-        return "❌ Deadline has passed. Score updates are locked."
-
     matches = Match.query.all()
 
     for match in matches:
+
+        # ✅ Lock only previous matchdays
+        if match.stage == "group" and is_match_locked(match.matchday):
+            continue
+
         home_score = request.form.get(f"home_{match.id}")
         away_score = request.form.get(f"away_{match.id}")
 
