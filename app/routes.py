@@ -1,6 +1,7 @@
 import random
 import os
 from flask import Blueprint, render_template
+from flask_login import login_required   # ✅ ADDED
 from sqlalchemy import or_
 from .models import Group, Team, Match
 from . import db
@@ -8,7 +9,7 @@ from . import db
 main = Blueprint("main", __name__)
 
 # ==========================================================
-# HOME
+# HOME (PUBLIC)
 # ==========================================================
 @main.route("/")
 def home():
@@ -16,9 +17,10 @@ def home():
     return render_template("home.html", groups=groups)
 
 # ==========================================================
-# SETUP (INITIALIZE DATABASE)
+# SETUP (ADMIN ONLY)
 # ==========================================================
 @main.route("/setup")
+@login_required
 def setup():
 
     Match.query.delete()
@@ -58,9 +60,10 @@ def setup():
     return "✅ Groups Created Successfully!"
 
 # ==========================================================
-# GENERATE GROUP FIXTURES ✅ ADDED
+# GENERATE GROUP FIXTURES (ADMIN ONLY)
 # ==========================================================
 @main.route("/generate-group-fixtures")
+@login_required
 def generate_group_fixtures():
 
     Match.query.filter_by(stage="group").delete()
@@ -101,7 +104,7 @@ def generate_group_fixtures():
     return "✅ Group Fixtures Generated!"
 
 # ==========================================================
-# GROUP FIXTURES (WITH MATCHDAYS)
+# GROUP FIXTURES (PUBLIC)
 # ==========================================================
 @main.route("/group-fixtures")
 def group_fixtures():
@@ -127,7 +130,7 @@ def group_fixtures():
     return render_template("group_fixtures.html", data=data)
 
 # ==========================================================
-# STANDINGS
+# STANDINGS (PUBLIC)
 # ==========================================================
 @main.route("/standings")
 def standings():
@@ -206,9 +209,10 @@ def standings():
     )
 
 # ==========================================================
-# OVERVIEW
+# OVERVIEW (ADMIN ONLY)
 # ==========================================================
 @main.route("/overview")
+@login_required
 def overview():
 
     stages = ["group", "r16", "quarter", "semi", "third", "final"]
@@ -223,15 +227,12 @@ def overview():
     return render_template("overview.html", status=status)
 
 # ==========================================================
-# GENERATE SEMI
+# GENERATE SEMI (ADMIN ONLY)
 # ==========================================================
 @main.route("/generate-semi")
+@login_required
 def generate_semi():
-
     quarter_matches = Match.query.filter_by(stage="quarter").all()
-
-    if not quarter_matches:
-        return "❌ Quarter not generated."
 
     if any(not m.is_completed for m in quarter_matches):
         return "❌ Complete all Quarter matches first."
@@ -240,7 +241,7 @@ def generate_semi():
 
     for m in quarter_matches:
         if m.home_score == m.away_score:
-            return f"❌ Draw detected between {m.home_team.name} and {m.away_team.name}. Replay required."
+            return "❌ Draw detected."
 
         winner = m.home_team if m.home_score > m.away_score else m.away_team
         winners.append(winner)
@@ -262,15 +263,12 @@ def generate_semi():
     return "✅ Semi Generated Successfully!"
 
 # ==========================================================
-# GENERATE FINAL + THIRD PLACE
+# GENERATE FINAL (ADMIN ONLY)
 # ==========================================================
 @main.route("/generate-final")
+@login_required
 def generate_final():
-
     semi_matches = Match.query.filter_by(stage="semi").all()
-
-    if not semi_matches:
-        return "❌ Semi not generated."
 
     if any(not m.is_completed for m in semi_matches):
         return "❌ Complete all Semi matches first."
@@ -279,10 +277,6 @@ def generate_final():
     third_teams = []
 
     for m in semi_matches:
-
-        if m.home_score == m.away_score:
-            return f"❌ Draw detected between {m.home_team.name} and {m.away_team.name}. Replay required."
-
         if m.home_score > m.away_score:
             final_teams.append(m.home_team)
             third_teams.append(m.away_team)
@@ -294,24 +288,20 @@ def generate_final():
     Match.query.filter_by(stage="third").delete()
     db.session.commit()
 
-    db.session.add(Match(
-        home_team_id=final_teams[0].id,
-        away_team_id=final_teams[1].id,
-        stage="final"
-    ))
+    db.session.add(Match(home_team_id=final_teams[0].id,
+                         away_team_id=final_teams[1].id,
+                         stage="final"))
 
-    db.session.add(Match(
-        home_team_id=third_teams[0].id,
-        away_team_id=third_teams[1].id,
-        stage="third"
-    ))
+    db.session.add(Match(home_team_id=third_teams[0].id,
+                         away_team_id=third_teams[1].id,
+                         stage="third"))
 
     db.session.commit()
 
     return "✅ Final and Third Place Generated Successfully!"
 
 # ==========================================================
-# PAGE ROUTES
+# PUBLIC VIEW ROUTES
 # ==========================================================
 @main.route("/r16")
 def r16():
@@ -340,18 +330,4 @@ def final():
 
 @main.route("/bracket")
 def bracket():
-
-    r16_matches = Match.query.filter_by(stage="r16").all()
-    quarter_matches = Match.query.filter_by(stage="quarter").all()
-    semi_matches = Match.query.filter_by(stage="semi").all()
-    final_matches = Match.query.filter_by(stage="final").all()
-    third_matches = Match.query.filter_by(stage="third").all()
-
-    return render_template(
-        "bracket.html",
-        r16_matches=r16_matches,
-        quarter_matches=quarter_matches,
-        semi_matches=semi_matches,
-        final_matches=final_matches,
-        third_matches=third_matches
-    )
+    return render_template("bracket.html")
