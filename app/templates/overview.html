@@ -1,74 +1,39 @@
 {% extends "base.html" %}
-
 {% block content %}
 
-<h2 class="text-center mb-4">📊 Tournament Overview</h2>
+<h2 class="mb-4">🏆 Tournament Stage Control</h2>
 
-<div class="card p-4">
+<div class="card bg-dark text-white p-4">
 
-    <table class="table text-center">
-        <thead>
-            <tr>
-                <th>Stage</th>
-                <th>Completed</th>
-                <th>Total</th>
-                <th>Status</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody>
+    {% if context.group_complete and not context.r16_exists %}
+        <a href="/generate-r16" class="btn btn-primary mb-2">
+            Generate Round of 16
+        </a>
+    {% endif %}
 
-            {% for stage, values in status.items() %}
+    {% if context.r16_complete and not context.quarter_exists %}
+        <a href="/generate-quarter" class="btn btn-primary mb-2">
+            Generate Quarter Final
+        </a>
+    {% endif %}
 
-                {% set completed = values[0] %}
-                {% set total = values[1] %}
+    {% if context.quarter_complete and not context.semi_exists %}
+        <a href="/generate-semi" class="btn btn-primary mb-2">
+            Generate Semi Final
+        </a>
+    {% endif %}
 
-                <tr>
-                    <td>{{ stage }}</td>
-                    <td>{{ completed }}</td>
-                    <td>{{ total }}</td>
-                    <td>
-                        {% if total == 0 %}
-                            ❌ Not Generated
-                        {% elif completed < total %}
-                            ⏳ In Progress
-                        {% else %}
-                            ✅ Completed
-                        {% endif %}
-                    </td>
+    {% if context.semi_complete and not context.final_exists %}
+        <a href="/generate-final" class="btn btn-danger mb-2">
+            Generate Final & Third Place
+        </a>
+    {% endif %}
 
-                    <td>
-                        {% if stage == "Group" and completed == total and total > 0 %}
-                            <a href="/generate-r16" class="btn btn-dark btn-sm">
-                                Generate R16
-                            </a>
-
-                        {% elif stage == "R16" and completed == total and total > 0 %}
-                            <a href="/generate-quarter" class="btn btn-dark btn-sm">
-                                Generate Quarterfinal
-                            </a>
-
-                        {% elif stage == "Quarter" and completed == total and total > 0 %}
-                            <a href="/generate-semi" class="btn btn-dark btn-sm">
-                                Generate Semifinal
-                            </a>
-
-                        {% elif stage == "Semi" and completed == total and total > 0 %}
-                            <a href="/generate-final" class="btn btn-dark btn-sm">
-                                Generate Final
-                            </a>
-
-                        {% else %}
-                            —
-                        {% endif %}
-                    </td>
-
-                </tr>
-
-            {% endfor %}
-
-        </tbody>
-    </table>
+    {% if context.tournament_finished %}
+        <div class="alert alert-success mt-3">
+            🏆 Tournament Completed!
+        </div>
+    {% endif %}
 
 </div>
 

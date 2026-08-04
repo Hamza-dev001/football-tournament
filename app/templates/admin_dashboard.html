@@ -1,90 +1,60 @@
 {% extends "base.html" %}
-
 {% block content %}
 
-<style>
-.admin-card {
-    background: #111;
-    border: 1px solid #00f2ff44;
-    border-radius: 12px;
-    padding: 15px;
-    margin-bottom: 25px;
-}
+<h2 class="mb-4">⚙ Admin Dashboard</h2>
 
-.match-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-    color: white;
-}
+<div style="margin-bottom:20px;">
+    <a href="{{ url_for('admin.overview') }}" class="btn btn-warning">
+        🏆 Tournament Stage Control
+    </a>
+    <a href="{{ url_for('admin.logout') }}" class="btn btn-danger">
+        Logout
+    </a>
+</div>
 
-.match-row strong {
-    color: #00f2ff;
-}
-
-.score-input {
-    width: 70px;
-    text-align: center;
-    background-color: #222;
-    color: white;
-    border: 1px solid #00f2ff44;
-}
-
-.score-input:focus {
-    outline: none;
-    box-shadow: 0 0 6px #00f2ff;
-}
-</style>
-
-<h2 class="mb-4">⚙ Admin Dashboard (Bulk Score Entry)</h2>
-
-<form method="POST" action="/admin/bulk-update">
+<form method="POST" action="{{ url_for('admin.bulk_update') }}">
 
     {% for stage, matches in data.items() %}
 
-        <div class="admin-card">
+        {% if matches %}
+        <div class="card bg-dark text-white mb-4 p-3">
             <h4>{{ stage|upper }}</h4>
 
             {% for match in matches %}
 
-                <div class="match-row">
+                <div class="d-flex justify-content-between align-items-center mb-2">
 
-                    <div style="width: 30%;">
-                        <strong>{{ match.home_team.name }}</strong>
-                    </div>
+                    <strong style="width:30%;">
+                        {{ match.home_team.name }}
+                    </strong>
 
-                    <div>
-                        <input type="number"
-                               name="home_{{ match.id }}"
-                               value="{{ match.home_score if match.home_score is not none else '' }}"
-                               class="score-input">
-                    </div>
+                    <input type="number"
+                           name="home_{{ match.id }}"
+                           value="{{ match.home_score if match.home_score is not none else '' }}"
+                           class="form-control text-center"
+                           style="width:80px;">
 
-                    <div style="margin: 0 10px;">
-                        vs
-                    </div>
+                    <span>vs</span>
 
-                    <div>
-                        <input type="number"
-                               name="away_{{ match.id }}"
-                               value="{{ match.away_score if match.away_score is not none else '' }}"
-                               class="score-input">
-                    </div>
+                    <input type="number"
+                           name="away_{{ match.id }}"
+                           value="{{ match.away_score if match.away_score is not none else '' }}"
+                           class="form-control text-center"
+                           style="width:80px;">
 
-                    <div style="width: 30%; text-align: right;">
-                        <strong>{{ match.away_team.name }}</strong>
-                    </div>
+                    <strong style="width:30%; text-align:right;">
+                        {{ match.away_team.name }}
+                    </strong>
 
                 </div>
 
             {% endfor %}
-
         </div>
+        {% endif %}
 
     {% endfor %}
 
-    <button type="submit" class="btn btn-dark">
+    <button type="submit" class="btn btn-success">
         ✅ Save All Scores
     </button>
 
