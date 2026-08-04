@@ -32,7 +32,7 @@ def home():
     return render_template("home.html", groups=groups)
 
 # ==========================================================
-# GROUP FIXTURES (PUBLIC) ✅ RESTORED
+# GROUP FIXTURES (PUBLIC)
 # ==========================================================
 @main.route("/group-fixtures")
 def group_fixtures():
@@ -119,10 +119,7 @@ def standings():
                 "points": points
             })
 
-        table.sort(
-            key=lambda x: (x["points"], x["gd"], x["gf"]),
-            reverse=True
-        )
+        table.sort(key=lambda x: (x["points"], x["gd"], x["gf"]), reverse=True)
 
         standings_data.append({
             "group": group,
@@ -148,8 +145,8 @@ def setup():
     db.session.commit()
 
     group_names = ["Group A", "Group B", "Group C", "Group D", "Group E"]
-
     groups = []
+
     for name in group_names:
         group = Group(name=name)
         db.session.add(group)
@@ -307,3 +304,36 @@ def generate_final():
     db.session.commit()
 
     return "✅ Final and Third Place Generated Successfully!"
+
+# ==========================================================
+# PUBLIC VIEW ROUTES
+# ==========================================================
+
+@main.route("/r16")
+def r16():
+    matches = Match.query.filter_by(stage="r16").all()
+    return render_template("r16.html", matches=matches)
+
+@main.route("/quarterfinal")
+def quarterfinal():
+    matches = Match.query.filter_by(stage="quarter").all()
+    return render_template("quarterfinal.html", matches=matches)
+
+@main.route("/semifinal")
+def semifinal():
+    matches = Match.query.filter_by(stage="semi").all()
+    return render_template("knockout_stage.html", matches=matches)
+
+@main.route("/third-place")
+def third_place():
+    matches = Match.query.filter_by(stage="third").all()
+    return render_template("knockout_single.html", matches=matches)
+
+@main.route("/final")
+def final():
+    matches = Match.query.filter_by(stage="final").all()
+    return render_template("final_celebration.html", matches=matches)
+
+@main.route("/bracket")
+def bracket():
+    return render_template("bracket.html")
