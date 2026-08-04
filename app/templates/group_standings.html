@@ -9,11 +9,18 @@
 
     {% if top_scoring_team %}
     <div class="col-md-6">
-        <div class="card text-center p-3">
-            <h4>🔥 Highest Scoring Team</h4>
-            <p>
-                <strong>{{ top_scoring_team.team.name }}</strong><br>
-                Goals Scored: {{ top_scoring_team.gf }}
+        <div class="card text-center p-4">
+            <h4 style="color:#00f2ff; text-shadow:0 0 10px #00f2ff;">
+                🔥 Highest Scoring Team
+            </h4>
+            <p class="mt-3">
+                <strong style="color:#00f2ff; font-size:1.4rem; text-shadow:0 0 10px #00f2ff;">
+                    {{ top_scoring_team.team.name }}
+                </strong>
+                <br>
+                <span style="color:#ffc107; font-weight:bold; font-size:1.1rem;">
+                    Goals Scored: {{ top_scoring_team.gf }}
+                </span>
             </p>
         </div>
     </div>
@@ -21,11 +28,18 @@
 
     {% if best_defense_team %}
     <div class="col-md-6">
-        <div class="card text-center p-3">
-            <h4>🛡 Best Defense</h4>
-            <p>
-                <strong>{{ best_defense_team.team.name }}</strong><br>
-                Goals Conceded: {{ best_defense_team.ga }}
+        <div class="card text-center p-4">
+            <h4 style="color:#00f2ff; text-shadow:0 0 10px #00f2ff;">
+                🛡 Best Defense
+            </h4>
+            <p class="mt-3">
+                <strong style="color:#00f2ff; font-size:1.4rem; text-shadow:0 0 10px #00f2ff;">
+                    {{ best_defense_team.team.name }}
+                </strong>
+                <br>
+                <span style="color:#ffc107; font-weight:bold; font-size:1.1rem;">
+                    Goals Conceded: {{ best_defense_team.ga }}
+                </span>
             </p>
         </div>
     </div>
@@ -33,11 +47,12 @@
 
 </div>
 
+<!-- ✅ GROUP TABLES -->
 {% for item in standings_data %}
 
 <div class="card p-4 mb-4">
 
-    <h4 class="mb-3" style="color:#00f2ff;">
+    <h4 class="mb-3" style="color:#00f2ff; text-shadow:0 0 8px #00f2ff;">
         {{ item.group.name }}
     </h4>
 
@@ -63,15 +78,21 @@
                 {% for team in item.table %}
                 <tr>
                     <td>{{ loop.index }}</td>
-                    <td>{{ team.team.name }}</td>
+                    <td style="font-weight:bold;">{{ team.team.name }}</td>
                     <td>{{ team.played }}</td>
                     <td>{{ team.wins }}</td>
                     <td>{{ team.draws }}</td>
                     <td>{{ team.losses }}</td>
-                    <td>{{ team.gf }}</td>
+                    <td style="color:#ffc107; font-weight:bold;">
+                        {{ team.gf }}
+                    </td>
                     <td>{{ team.ga }}</td>
                     <td>{{ team.gd }}</td>
-                    <td><strong>{{ team.points }}</strong></td>
+                    <td>
+                        <strong style="color:#00f2ff;">
+                            {{ team.points }}
+                        </strong>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
