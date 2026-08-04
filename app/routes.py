@@ -41,7 +41,7 @@ def rules():
     return render_template("rules.html")
 
 # ==========================================================
-# GROUP FIXTURES (PUBLIC)
+# GROUP FIXTURES (PUBLIC) — WITH PROGRESSIVE MATCHDAYS
 # ==========================================================
 
 @main.route("/group-fixtures")
@@ -54,15 +54,28 @@ def group_fixtures():
         matches = Match.query.filter_by(
             stage="group",
             group_id=group.id
-        ).all()
+        ).order_by(Match.matchday).all()
 
         matchdays = {}
+
         for match in matches:
             matchdays.setdefault(match.matchday, []).append(match)
 
+        # ✅ Progressive Matchday Logic
+        visible_matchdays = {}
+
+        for matchday in sorted(matchdays.keys()):
+            matches_in_day = matchdays[matchday]
+
+            visible_matchdays[matchday] = matches_in_day
+
+            # Stop if current matchday not fully completed
+            if not all(m.is_completed for m in matches_in_day):
+                break
+
         data.append({
             "group": group,
-            "matchdays": matchdays
+            "matchdays": visible_matchdays
         })
 
     return render_template("group_fixtures.html", data=data)
@@ -103,18 +116,22 @@ def standings():
                     gf += m.home_score
                     ga += m.away_score
                     if m.home_score > m.away_score:
-                        wins += 1; points += 3
+                        wins += 1
+                        points += 3
                     elif m.home_score == m.away_score:
-                        draws += 1; points += 1
+                        draws += 1
+                        points += 1
                     else:
                         losses += 1
                 else:
                     gf += m.away_score
                     ga += m.home_score
                     if m.away_score > m.home_score:
-                        wins += 1; points += 3
+                        wins += 1
+                        points += 3
                     elif m.away_score == m.home_score:
-                        draws += 1; points += 1
+                        draws += 1
+                        points += 1
                     else:
                         losses += 1
 
@@ -137,7 +154,7 @@ def standings():
             "table": table
         })
 
-    # ✅ NEW SECTION — OVERALL TOURNAMENT STATS
+    # ✅ OVERALL TOURNAMENT STATS
     all_teams = []
     for group in standings_data:
         for team in group["table"]:
