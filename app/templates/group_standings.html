@@ -4,6 +4,35 @@
 
 <h2 class="text-center mb-4">📊 Group Standings</h2>
 
+<!-- ✅ TOURNAMENT OVERALL STATS -->
+<div class="row mb-4">
+
+    {% if top_scoring_team %}
+    <div class="col-md-6">
+        <div class="card text-center p-3">
+            <h4>🔥 Highest Scoring Team</h4>
+            <p>
+                <strong>{{ top_scoring_team.team.name }}</strong><br>
+                Goals Scored: {{ top_scoring_team.gf }}
+            </p>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if best_defense_team %}
+    <div class="col-md-6">
+        <div class="card text-center p-3">
+            <h4>🛡 Best Defense</h4>
+            <p>
+                <strong>{{ best_defense_team.team.name }}</strong><br>
+                Goals Conceded: {{ best_defense_team.ga }}
+            </p>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
 {% for item in standings_data %}
 
 <div class="card p-4 mb-4">

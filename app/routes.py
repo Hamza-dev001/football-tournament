@@ -33,7 +33,7 @@ def home():
     return render_template("home.html", groups=groups)
 
 # ==========================================================
-# RULES PAGE (NEW)
+# RULES PAGE
 # ==========================================================
 
 @main.route("/rules")
@@ -137,8 +137,21 @@ def standings():
             "table": table
         })
 
-    return render_template("group_standings.html",
-                           standings_data=standings_data)
+    # ✅ NEW SECTION — OVERALL TOURNAMENT STATS
+    all_teams = []
+    for group in standings_data:
+        for team in group["table"]:
+            all_teams.append(team)
+
+    top_scoring_team = max(all_teams, key=lambda x: x["gf"]) if all_teams else None
+    best_defense_team = min(all_teams, key=lambda x: x["ga"]) if all_teams else None
+
+    return render_template(
+        "group_standings.html",
+        standings_data=standings_data,
+        top_scoring_team=top_scoring_team,
+        best_defense_team=best_defense_team
+    )
 
 # ==========================================================
 # SETUP (ADMIN ONLY)
