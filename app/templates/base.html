@@ -54,39 +54,9 @@
             text-shadow: 0 0 6px #00f2ff;
         }
 
-        /* ✅ TOP 2 QUALIFICATION */
         .qualified-row {
             background-color: rgba(0, 255, 120, 0.15) !important;
             border-left: 4px solid #00ff88;
-        }
-
-        /* ✅ COUNTDOWN FORCED VISIBLE */
-        #countdownTimer {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: #ffffff !important;
-            text-shadow: 0 0 15px #00f2ff, 0 0 25px #00f2ff;
-        }
-
-        .countdown-danger {
-            color: #ff3b3b !important;
-            text-shadow: 0 0 15px #ff0000;
-            animation: flash 1s infinite alternate;
-        }
-
-        @keyframes flash {
-            from { opacity: 1; }
-            to { opacity: 0.4; }
-        }
-
-        .deadline-banner {
-            background: #ff0000;
-            color: white;
-            font-weight: bold;
-            padding: 8px;
-            border-radius: 8px;
-            margin-top: 10px;
-            animation: flash 1s infinite alternate;
         }
 
     </style>
@@ -119,6 +89,31 @@
 
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('main.standings') }}">Standings</a>
+                </li>
+
+                <!-- ✅ RESTORED LINKS -->
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('main.r16') }}">Round of 16</a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('main.quarterfinal') }}">Quarterfinal</a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('main.semifinal') }}">Semifinal</a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('main.third_place') }}">Third Place</a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('main.final') }}">Final</a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('main.bracket') }}">Bracket</a>
                 </li>
 
                 <li class="nav-item">
