@@ -7,7 +7,7 @@ from datetime import datetime
 admin = Blueprint("admin", __name__)
 
 # ✅ TOURNAMENT START DATE (VERY IMPORTANT)
-TOURNAMENT_START = datetime(2025, 8, 4, 10, 0, 0)  # Adjust year if needed
+TOURNAMENT_START = datetime(2026, 8, 4, 10, 0, 0)  # Adjust year if needed
 
 
 # ==========================================================
