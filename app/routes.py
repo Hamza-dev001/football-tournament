@@ -32,6 +32,107 @@ def home():
     return render_template("home.html", groups=groups)
 
 # ==========================================================
+# GROUP FIXTURES (PUBLIC) ✅ RESTORED
+# ==========================================================
+@main.route("/group-fixtures")
+def group_fixtures():
+
+    groups = Group.query.all()
+    data = []
+
+    for group in groups:
+        matches = Match.query.filter_by(
+            stage="group",
+            group_id=group.id
+        ).all()
+
+        matchdays = {}
+        for match in matches:
+            matchdays.setdefault(match.matchday, []).append(match)
+
+        data.append({
+            "group": group,
+            "matchdays": matchdays
+        })
+
+    return render_template("group_fixtures.html", data=data)
+
+# ==========================================================
+# STANDINGS (PUBLIC)
+# ==========================================================
+@main.route("/standings")
+def standings():
+
+    groups = Group.query.all()
+    standings_data = []
+
+    for group in groups:
+        table = []
+
+        for team in group.teams:
+
+            played = wins = draws = losses = points = 0
+            gf = ga = 0
+
+            matches = Match.query.filter(
+                Match.stage == "group",
+                or_(
+                    Match.home_team_id == team.id,
+                    Match.away_team_id == team.id
+                )
+            ).all()
+
+            for m in matches:
+                if m.home_score is None:
+                    continue
+
+                played += 1
+
+                if m.home_team_id == team.id:
+                    gf += m.home_score
+                    ga += m.away_score
+                    if m.home_score > m.away_score:
+                        wins += 1; points += 3
+                    elif m.home_score == m.away_score:
+                        draws += 1; points += 1
+                    else:
+                        losses += 1
+                else:
+                    gf += m.away_score
+                    ga += m.home_score
+                    if m.away_score > m.home_score:
+                        wins += 1; points += 3
+                    elif m.away_score == m.home_score:
+                        draws += 1; points += 1
+                    else:
+                        losses += 1
+
+            table.append({
+                "team": team,
+                "played": played,
+                "wins": wins,
+                "draws": draws,
+                "losses": losses,
+                "gf": gf,
+                "ga": ga,
+                "gd": gf - ga,
+                "points": points
+            })
+
+        table.sort(
+            key=lambda x: (x["points"], x["gd"], x["gf"]),
+            reverse=True
+        )
+
+        standings_data.append({
+            "group": group,
+            "table": table
+        })
+
+    return render_template("group_standings.html",
+                           standings_data=standings_data)
+
+# ==========================================================
 # SETUP (ADMIN ONLY)
 # ==========================================================
 @main.route("/setup")
