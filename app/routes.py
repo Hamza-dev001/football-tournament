@@ -26,14 +26,24 @@ def tournament_finished():
 # ==========================================================
 # HOME (PUBLIC)
 # ==========================================================
+
 @main.route("/")
 def home():
     groups = Group.query.all()
     return render_template("home.html", groups=groups)
 
 # ==========================================================
+# RULES PAGE (NEW)
+# ==========================================================
+
+@main.route("/rules")
+def rules():
+    return render_template("rules.html")
+
+# ==========================================================
 # GROUP FIXTURES (PUBLIC)
 # ==========================================================
+
 @main.route("/group-fixtures")
 def group_fixtures():
 
@@ -60,6 +70,7 @@ def group_fixtures():
 # ==========================================================
 # STANDINGS (PUBLIC)
 # ==========================================================
+
 @main.route("/standings")
 def standings():
 
@@ -132,6 +143,7 @@ def standings():
 # ==========================================================
 # SETUP (ADMIN ONLY)
 # ==========================================================
+
 @main.route("/setup")
 @login_required
 def setup():
@@ -178,6 +190,7 @@ def setup():
 # ==========================================================
 # GENERATE GROUP FIXTURES (ADMIN ONLY)
 # ==========================================================
+
 @main.route("/generate-group-fixtures")
 @login_required
 def generate_group_fixtures():
@@ -218,92 +231,6 @@ def generate_group_fixtures():
     db.session.commit()
 
     return "✅ Group Fixtures Generated!"
-
-# ==========================================================
-# GENERATE SEMI (ADMIN ONLY)
-# ==========================================================
-@main.route("/generate-semi")
-@login_required
-def generate_semi():
-
-    if tournament_finished():
-        return "🏆 Tournament already finished."
-
-    if not stage_exists("quarter"):
-        return "❌ Quarter not generated."
-
-    if not stage_complete("quarter"):
-        return "❌ Complete all Quarter matches first."
-
-    if stage_exists("semi"):
-        return "❌ Semi already generated."
-
-    quarter_matches = Match.query.filter_by(stage="quarter").all()
-    winners = []
-
-    for m in quarter_matches:
-        if m.home_score == m.away_score:
-            return "❌ Draw detected."
-
-        winner = m.home_team if m.home_score > m.away_score else m.away_team
-        winners.append(winner)
-
-    random.shuffle(winners)
-
-    for i in range(0, 4, 2):
-        db.session.add(Match(
-            home_team_id=winners[i].id,
-            away_team_id=winners[i+1].id,
-            stage="semi"
-        ))
-
-    db.session.commit()
-
-    return "✅ Semi Generated Successfully!"
-
-# ==========================================================
-# GENERATE FINAL (ADMIN ONLY)
-# ==========================================================
-@main.route("/generate-final")
-@login_required
-def generate_final():
-
-    if tournament_finished():
-        return "🏆 Tournament already finished."
-
-    if not stage_exists("semi"):
-        return "❌ Semi not generated."
-
-    if not stage_complete("semi"):
-        return "❌ Complete all Semi matches first."
-
-    if stage_exists("final"):
-        return "❌ Final already generated."
-
-    semi_matches = Match.query.filter_by(stage="semi").all()
-
-    final_teams = []
-    third_teams = []
-
-    for m in semi_matches:
-        if m.home_score > m.away_score:
-            final_teams.append(m.home_team)
-            third_teams.append(m.away_team)
-        else:
-            final_teams.append(m.away_team)
-            third_teams.append(m.home_team)
-
-    db.session.add(Match(home_team_id=final_teams[0].id,
-                         away_team_id=final_teams[1].id,
-                         stage="final"))
-
-    db.session.add(Match(home_team_id=third_teams[0].id,
-                         away_team_id=third_teams[1].id,
-                         stage="third"))
-
-    db.session.commit()
-
-    return "✅ Final and Third Place Generated Successfully!"
 
 # ==========================================================
 # PUBLIC VIEW ROUTES
