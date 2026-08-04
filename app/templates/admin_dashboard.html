@@ -3,14 +3,25 @@
 
 <h2 class="mb-4">⚙ Admin Dashboard</h2>
 
-<div style="margin-bottom:20px;">
-    <a href="{{ url_for('admin.overview') }}" class="btn btn-warning">
-        🏆 Tournament Stage Control
-    </a>
-    <a href="{{ url_for('admin.logout') }}" class="btn btn-danger">
-        Logout
-    </a>
-</div>
+<!-- ✅ DEADLINE STATUS -->
+{% if deadline_locked %}
+    <div class="alert alert-danger">
+        🔒 Deadline has passed. Score updates are locked.
+    </div>
+{% endif %}
+
+{% if override_active %}
+    <div class="alert alert-warning">
+        👑 Deadline Override is ACTIVE.
+    </div>
+{% endif %}
+
+<!-- ✅ OVERRIDE BUTTON -->
+<form method="POST" action="{{ url_for('admin.override_deadline') }}" class="mb-3">
+    <button class="btn btn-danger">
+        ⚠ Override Deadline (Admin Only)
+    </button>
+</form>
 
 <form method="POST" action="{{ url_for('admin.bulk_update') }}">
 
@@ -32,7 +43,8 @@
                            name="home_{{ match.id }}"
                            value="{{ match.home_score if match.home_score is not none else '' }}"
                            class="form-control text-center"
-                           style="width:80px;">
+                           style="width:80px;"
+                           {% if deadline_locked and not override_active %}disabled{% endif %}>
 
                     <span>vs</span>
 
@@ -40,7 +52,8 @@
                            name="away_{{ match.id }}"
                            value="{{ match.away_score if match.away_score is not none else '' }}"
                            class="form-control text-center"
-                           style="width:80px;">
+                           style="width:80px;"
+                           {% if deadline_locked and not override_active %}disabled{% endif %}>
 
                     <strong style="width:30%; text-align:right;">
                         {{ match.away_team.name }}
@@ -54,7 +67,8 @@
 
     {% endfor %}
 
-    <button type="submit" class="btn btn-success">
+    <button type="submit" class="btn btn-success"
+        {% if deadline_locked and not override_active %}disabled{% endif %}>
         ✅ Save All Scores
     </button>
 

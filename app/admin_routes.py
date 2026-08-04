@@ -1,26 +1,24 @@
-from flask import Blueprint, render_template, redirect, url_for, request
+from flask import Blueprint, render_template, redirect, url_for, request, session
 from flask_login import login_user, login_required, logout_user
 from .models import User, Match
 from . import db
-import random
+from datetime import datetime
 
 admin = Blueprint("admin", __name__)
 
 # ==========================================================
-# STAGE UTILITIES
+# DEADLINE CHECK
 # ==========================================================
 
-def stage_exists(stage_name):
-    return Match.query.filter_by(stage=stage_name).count() > 0
-
-def stage_complete(stage_name):
-    matches = Match.query.filter_by(stage=stage_name).all()
-    if not matches:
+def deadline_passed():
+    # Allow if override is active
+    if session.get("override_deadline"):
         return False
-    return all(m.is_completed for m in matches)
 
-def tournament_finished():
-    return stage_complete("final")
+    now = datetime.now()
+    deadline = now.replace(hour=10, minute=0, second=0, microsecond=0)
+
+    return now >= deadline
 
 
 # ==========================================================
@@ -52,12 +50,13 @@ def login():
 @admin.route("/logout")
 @login_required
 def logout():
+    session.pop("override_deadline", None)
     logout_user()
     return redirect(url_for("main.home"))
 
 
 # ==========================================================
-# ADMIN DASHBOARD (SCORE ENTRY)
+# DASHBOARD
 # ==========================================================
 
 @admin.route("/dashboard")
@@ -71,30 +70,12 @@ def dashboard():
         matches = Match.query.filter_by(stage=stage).all()
         data[stage] = matches
 
-    return render_template("admin_dashboard.html", data=data)
-
-
-# ==========================================================
-# ADMIN OVERVIEW (STAGE CONTROL)
-# ==========================================================
-
-@admin.route("/overview")
-@login_required
-def overview():
-
-    context = {
-        "group_complete": stage_complete("group"),
-        "r16_exists": stage_exists("r16"),
-        "r16_complete": stage_complete("r16"),
-        "quarter_exists": stage_exists("quarter"),
-        "quarter_complete": stage_complete("quarter"),
-        "semi_exists": stage_exists("semi"),
-        "semi_complete": stage_complete("semi"),
-        "final_exists": stage_exists("final"),
-        "tournament_finished": tournament_finished()
-    }
-
-    return render_template("overview.html", context=context)
+    return render_template(
+        "admin_dashboard.html",
+        data=data,
+        deadline_locked=deadline_passed(),
+        override_active=session.get("override_deadline", False)
+    )
 
 
 # ==========================================================
@@ -104,6 +85,9 @@ def overview():
 @admin.route("/bulk-update", methods=["POST"])
 @login_required
 def bulk_update():
+
+    if deadline_passed():
+        return "❌ Deadline has passed. Score updates are locked."
 
     matches = Match.query.all()
 
@@ -117,4 +101,15 @@ def bulk_update():
             match.is_completed = True
 
     db.session.commit()
+    return redirect(url_for("admin.dashboard"))
+
+
+# ==========================================================
+# ADMIN DEADLINE OVERRIDE
+# ==========================================================
+
+@admin.route("/override-deadline", methods=["POST"])
+@login_required
+def override_deadline():
+    session["override_deadline"] = True
     return redirect(url_for("admin.dashboard"))
