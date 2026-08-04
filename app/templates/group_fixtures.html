@@ -4,13 +4,20 @@
 
 <h2 class="text-center mb-4">📅 Group Fixtures</h2>
 
+<!-- ✅ COUNTDOWN CARD -->
 <div class="card text-center p-4 mb-4">
     <h5>⏳ Matchday Deadline Countdown</h5>
-    <div id="countdownTimer">Loading...</div>
+    <div id="countdownTimer"
+         style="font-size: 2.5rem; font-weight: bold; color: white; text-shadow: 0 0 15px #00f2ff;">
+        Loading...
+    </div>
+
     <div id="deadlineBanner"></div>
+
     <small>Deadline resets daily at 10:00 AM</small>
 </div>
 
+<!-- ✅ SOUND -->
 <audio id="alarmSound">
     <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg">
 </audio>
@@ -18,15 +25,19 @@
 {% for item in data %}
 
 <div class="card p-4 mb-4">
+
     <h4 class="mb-3">{{ item.group.name }}</h4>
 
     {% for matchday, matches in item.matchdays.items() %}
+
     <div class="mb-3">
         <h5 style="color:#ffc107;">Matchday {{ matchday }}</h5>
 
         <ul class="list-group list-group-flush">
+
             {% for match in matches %}
             <li class="list-group-item bg-dark text-white d-flex justify-content-between align-items-center">
+
                 <span>
                     {{ match.home_team.name }}
                     {% if match.home_score is not none %}
@@ -42,19 +53,25 @@
                     {% endif %}
                     {{ match.away_team.name }}
                 </span>
+
             </li>
             {% endfor %}
+
         </ul>
     </div>
+
     {% endfor %}
+
 </div>
 
 {% endfor %}
 
+<!-- ✅ COUNTDOWN SCRIPT -->
 <script>
 let alarmPlayed = false;
 
 function updateCountdown() {
+
     const now = new Date();
 
     let deadline = new Date();
@@ -66,6 +83,7 @@ function updateCountdown() {
     }
 
     const diff = deadline - now;
+
     const timer = document.getElementById("countdownTimer");
     const banner = document.getElementById("deadlineBanner");
     const alarm = document.getElementById("alarmSound");
@@ -73,9 +91,9 @@ function updateCountdown() {
     if (!timer) return;
 
     if (diff <= 0) {
-        timer.innerHTML = "DEADLINE REACHED!";
-        timer.classList.add("countdown-danger");
-        banner.innerHTML = "<div class='deadline-banner'>🚨 DEADLINE CLOSED</div>";
+        timer.innerHTML = "🚨 DEADLINE REACHED!";
+        timer.style.color = "red";
+        banner.innerHTML = "<div style='background:red; padding:8px; font-weight:bold;'>DEADLINE CLOSED</div>";
         return;
     }
 
@@ -85,21 +103,40 @@ function updateCountdown() {
 
     timer.innerHTML = hours + "h " + minutes + "m " + seconds + "s";
 
+    // ✅ Last 1 hour → turn red
     if (diff <= 60 * 60 * 1000) {
-        timer.classList.add("countdown-danger");
+        timer.style.color = "red";
+        timer.style.textShadow = "0 0 15px red";
+    } else {
+        timer.style.color = "white";
+        timer.style.textShadow = "0 0 15px #00f2ff";
     }
 
+    // ✅ Last 10 minutes → banner + sound
     if (diff <= 10 * 60 * 1000) {
-        banner.innerHTML = "<div class='deadline-banner'>⚠ DEADLINE CLOSING SOON!</div>";
+
+        banner.innerHTML =
+            "<div style='background:red; padding:8px; font-weight:bold; animation: blink 1s infinite;'>⚠ DEADLINE CLOSING SOON!</div>";
+
         if (!alarmPlayed) {
             alarm.play();
             alarmPlayed = true;
         }
+    } else {
+        banner.innerHTML = "";
     }
 }
 
 setInterval(updateCountdown, 1000);
 updateCountdown();
 </script>
+
+<style>
+@keyframes blink {
+    0% {opacity: 1;}
+    50% {opacity: 0.4;}
+    100% {opacity: 1;}
+}
+</style>
 
 {% endblock %}
