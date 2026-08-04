@@ -58,6 +58,49 @@ def setup():
     return "✅ Groups Created Successfully!"
 
 # ==========================================================
+# GENERATE GROUP FIXTURES ✅ ADDED
+# ==========================================================
+@main.route("/generate-group-fixtures")
+def generate_group_fixtures():
+
+    Match.query.filter_by(stage="group").delete()
+    db.session.commit()
+
+    groups = Group.query.all()
+
+    for group in groups:
+        teams = group.teams
+        n = len(teams)
+        rotation = teams[:]
+
+        for round_num in range(n - 1):
+            for i in range(n // 2):
+                t1 = rotation[i]
+                t2 = rotation[n - 1 - i]
+
+                db.session.add(Match(
+                    home_team_id=t1.id,
+                    away_team_id=t2.id,
+                    stage="group",
+                    group_id=group.id,
+                    matchday=round_num + 1
+                ))
+
+                db.session.add(Match(
+                    home_team_id=t2.id,
+                    away_team_id=t1.id,
+                    stage="group",
+                    group_id=group.id,
+                    matchday=round_num + 1
+                ))
+
+            rotation = [rotation[0]] + [rotation[-1]] + rotation[1:-1]
+
+    db.session.commit()
+
+    return "✅ Group Fixtures Generated!"
+
+# ==========================================================
 # GROUP FIXTURES (WITH MATCHDAYS)
 # ==========================================================
 @main.route("/group-fixtures")
@@ -163,7 +206,7 @@ def standings():
     )
 
 # ==========================================================
-# OVERVIEW (MATCH STATUS)
+# OVERVIEW
 # ==========================================================
 @main.route("/overview")
 def overview():
@@ -201,9 +244,6 @@ def generate_semi():
 
         winner = m.home_team if m.home_score > m.away_score else m.away_team
         winners.append(winner)
-
-    if len(winners) != 4:
-        return "❌ Quarter winner calculation error."
 
     Match.query.filter_by(stage="semi").delete()
     db.session.commit()
@@ -271,7 +311,7 @@ def generate_final():
     return "✅ Final and Third Place Generated Successfully!"
 
 # ==========================================================
-# SIMPLE PAGE ROUTES (FOR NAVBAR STABILITY)
+# PAGE ROUTES
 # ==========================================================
 @main.route("/r16")
 def r16():
