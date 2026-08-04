@@ -36,10 +36,16 @@
             text-shadow: 0 0 8px #00f2ff;
         }
 
+        .rules-link {
+            color: #00f2ff !important;
+            font-weight: bold;
+            text-shadow: 0 0 6px #00f2ff;
+        }
+
         .card {
             background: linear-gradient(145deg, #1a1a1a, #222);
-            border: 1px solid #00f2ff33;
-            box-shadow: 0 0 15px #00f2ff22;
+            border: 1px solid #00f2ff55;
+            box-shadow: 0 0 20px #00f2ff33;
             border-radius: 12px;
         }
 
@@ -53,6 +59,13 @@
             color: #00f2ff;
             text-shadow: 0 0 6px #00f2ff;
         }
+
+        /* ✅ TOP 2 QUALIFICATION HIGHLIGHT */
+        .qualified-row {
+            background-color: rgba(0, 255, 120, 0.15) !important;
+            border-left: 4px solid #00ff88;
+        }
+
     </style>
 </head>
 
@@ -85,9 +98,8 @@
                     <a class="nav-link" href="{{ url_for('main.standings') }}">Standings</a>
                 </li>
 
-                <!-- ✅ NEW RULES LINK -->
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('main.rules') }}">Rules</a>
+                    <a class="nav-link rules-link" href="{{ url_for('main.rules') }}">Rules</a>
                 </li>
 
                 <li class="nav-item">

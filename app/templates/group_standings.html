@@ -4,20 +4,17 @@
 
 <h2 class="text-center mb-4">📊 Group Standings</h2>
 
-<!-- ✅ TOURNAMENT OVERALL STATS -->
+<!-- ✅ OVERALL TOURNAMENT STATS -->
 <div class="row mb-4">
 
     {% if top_scoring_team %}
     <div class="col-md-6">
         <div class="card text-center p-4">
-            <h4 style="color:#00f2ff; text-shadow:0 0 10px #00f2ff;">
-                🔥 Highest Scoring Team
-            </h4>
+            <h4>🔥 Highest Scoring Team</h4>
             <p class="mt-3">
                 <strong style="color:#00f2ff; font-size:1.4rem; text-shadow:0 0 10px #00f2ff;">
                     {{ top_scoring_team.team.name }}
-                </strong>
-                <br>
+                </strong><br>
                 <span style="color:#ffc107; font-weight:bold; font-size:1.1rem;">
                     Goals Scored: {{ top_scoring_team.gf }}
                 </span>
@@ -29,14 +26,11 @@
     {% if best_defense_team %}
     <div class="col-md-6">
         <div class="card text-center p-4">
-            <h4 style="color:#00f2ff; text-shadow:0 0 10px #00f2ff;">
-                🛡 Best Defense
-            </h4>
+            <h4>🛡 Best Defense</h4>
             <p class="mt-3">
                 <strong style="color:#00f2ff; font-size:1.4rem; text-shadow:0 0 10px #00f2ff;">
                     {{ best_defense_team.team.name }}
-                </strong>
-                <br>
+                </strong><br>
                 <span style="color:#ffc107; font-weight:bold; font-size:1.1rem;">
                     Goals Conceded: {{ best_defense_team.ga }}
                 </span>
@@ -52,7 +46,7 @@
 
 <div class="card p-4 mb-4">
 
-    <h4 class="mb-3" style="color:#00f2ff; text-shadow:0 0 8px #00f2ff;">
+    <h4 class="mb-3">
         {{ item.group.name }}
     </h4>
 
@@ -76,7 +70,7 @@
 
             <tbody>
                 {% for team in item.table %}
-                <tr>
+                <tr class="{% if loop.index <= 2 %}qualified-row{% endif %}">
                     <td>{{ loop.index }}</td>
                     <td style="font-weight:bold;">{{ team.team.name }}</td>
                     <td>{{ team.played }}</td>
