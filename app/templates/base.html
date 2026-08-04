@@ -91,7 +91,6 @@
                     <a class="nav-link" href="{{ url_for('main.standings') }}">Standings</a>
                 </li>
 
-                <!-- ✅ RESTORED LINKS -->
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('main.r16') }}">Round of 16</a>
                 </li>
@@ -120,9 +119,19 @@
                     <a class="nav-link rules-link" href="{{ url_for('main.rules') }}">Rules</a>
                 </li>
 
-                <li class="nav-item">
-                    <a class="nav-link text-warning" href="{{ url_for('admin.login') }}">Admin</a>
-                </li>
+                <!-- ✅ ADMIN / LOGOUT LOGIC -->
+                {% if current_user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link text-warning" href="{{ url_for('admin.dashboard') }}">Admin</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-danger" href="{{ url_for('admin.logout') }}">Logout</a>
+                    </li>
+                {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link text-warning" href="{{ url_for('admin.login') }}">Admin</a>
+                    </li>
+                {% endif %}
 
             </ul>
         </div>
