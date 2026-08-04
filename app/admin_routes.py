@@ -11,12 +11,19 @@ admin = Blueprint("admin", __name__)
 # ==========================================================
 
 def deadline_passed():
-    # Allow if override is active
+    # If override active → allow
     if session.get("override_deadline"):
         return False
 
     now = datetime.now()
-    deadline = now.replace(hour=10, minute=0, second=0, microsecond=0)
+
+    # Matchday runs from 10AM → next 10AM
+    today_10am = now.replace(hour=10, minute=0, second=0, microsecond=0)
+
+    if now >= today_10am:
+        deadline = today_10am.replace(day=today_10am.day + 1)
+    else:
+        deadline = today_10am
 
     return now >= deadline
 
@@ -79,7 +86,7 @@ def dashboard():
 
 
 # ==========================================================
-# BULK SCORE UPDATE
+# BULK UPDATE
 # ==========================================================
 
 @admin.route("/bulk-update", methods=["POST"])
@@ -105,7 +112,7 @@ def bulk_update():
 
 
 # ==========================================================
-# ADMIN DEADLINE OVERRIDE
+# DEADLINE OVERRIDE
 # ==========================================================
 
 @admin.route("/override-deadline", methods=["POST"])

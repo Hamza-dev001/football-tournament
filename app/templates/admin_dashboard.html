@@ -3,22 +3,20 @@
 
 <h2 class="mb-4">⚙ Admin Dashboard</h2>
 
-<!-- ✅ DEADLINE STATUS -->
 {% if deadline_locked %}
-    <div class="alert alert-danger">
-        🔒 Deadline has passed. Score updates are locked.
-    </div>
+<div class="alert alert-danger">
+    🔒 Deadline has passed. Score updates are locked.
+</div>
 {% endif %}
 
 {% if override_active %}
-    <div class="alert alert-warning">
-        👑 Deadline Override is ACTIVE.
-    </div>
+<div class="alert alert-warning">
+    👑 Deadline Override is ACTIVE.
+</div>
 {% endif %}
 
-<!-- ✅ OVERRIDE BUTTON -->
 <form method="POST" action="{{ url_for('admin.override_deadline') }}" class="mb-3">
-    <button class="btn btn-danger">
+    <button type="submit" class="btn btn-danger">
         ⚠ Override Deadline (Admin Only)
     </button>
 </form>
