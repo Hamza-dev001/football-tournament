@@ -17,13 +17,13 @@
 
         .navbar {
             background: linear-gradient(90deg, #000, #111);
-            box-shadow: 0 0 12px #00f2ff;
+            box-shadow: 0 0 15px #00f2ff;
         }
 
         .navbar-brand {
             font-weight: bold;
             color: #00f2ff !important;
-            text-shadow: 0 0 6px #00f2ff;
+            text-shadow: 0 0 8px #00f2ff;
         }
 
         .nav-link {
@@ -33,13 +33,13 @@
 
         .nav-link:hover {
             color: #00f2ff !important;
-            text-shadow: 0 0 8px #00f2ff;
+            text-shadow: 0 0 10px #00f2ff;
         }
 
         .rules-link {
             color: #00f2ff !important;
             font-weight: bold;
-            text-shadow: 0 0 8px #00f2ff;
+            text-shadow: 0 0 10px #00f2ff;
         }
 
         .card {
@@ -51,7 +51,28 @@
 
         h2, h4, h5 {
             color: #00f2ff;
-            text-shadow: 0 0 6px #00f2ff;
+            text-shadow: 0 0 8px #00f2ff;
+        }
+
+        /* ✅ STAGE INDICATOR */
+        .stage-card {
+            border: 2px solid #00f2ff;
+            box-shadow: 0 0 25px #00f2ff;
+            background: linear-gradient(145deg, #111, #1b1b1b);
+        }
+
+        .stage-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 0 12px #00f2ff;
+        }
+
+        .stage-name {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #ffc107;
+            text-shadow: 0 0 15px #ffc107, 0 0 25px #ffc107;
         }
 
     </style>
@@ -138,12 +159,15 @@
     </div>
 </nav>
 
-<!-- ✅ CURRENT STAGE INDICATOR -->
+<!-- ✅ CURRENT STAGE DISPLAY -->
 <div class="container mt-3">
-    <div class="card text-center p-2">
-        <strong style="font-size:1.1rem;">
-            Current Stage: {{ current_stage }}
-        </strong>
+    <div class="card stage-card text-center p-3">
+        <div class="stage-title">
+            🚩 CURRENT STAGE
+        </div>
+        <div class="stage-name">
+            {{ current_stage }}
+        </div>
     </div>
 </div>
 
