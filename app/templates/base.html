@@ -75,6 +75,12 @@
             text-shadow: 0 0 15px #ffc107, 0 0 25px #ffc107;
         }
 
+        /* ✅ PROGRESS TRACKER */
+        .progress-item {
+            font-weight: bold;
+            padding: 5px 10px;
+        }
+
     </style>
 </head>
 
@@ -125,12 +131,6 @@
                 </li>
                 {% endif %}
 
-                {% if third_exists %}
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('main.third_place') }}">Third Place</a>
-                </li>
-                {% endif %}
-
                 {% if final_exists %}
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('main.final') }}">Final</a>
@@ -141,59 +141,83 @@
                     <a class="nav-link rules-link" href="{{ url_for('main.rules') }}">Rules</a>
                 </li>
 
-                {% if current_user.is_authenticated %}
-                    <li class="nav-item">
-                        <a class="nav-link text-warning" href="{{ url_for('admin.dashboard') }}">Admin</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-danger" href="{{ url_for('admin.logout') }}">Logout</a>
-                    </li>
-                {% else %}
-                    <li class="nav-item">
-                        <a class="nav-link text-warning" href="{{ url_for('admin.login') }}">Admin</a>
-                    </li>
-                {% endif %}
-
             </ul>
         </div>
     </div>
 </nav>
 
-<!-- ✅ CURRENT STAGE DISPLAY -->
+<!-- ✅ CURRENT STAGE -->
 <div class="container mt-3">
     <div class="card stage-card text-center p-3">
-        <div class="stage-title">
-            🚩 CURRENT STAGE
-        </div>
-        <div class="stage-name">
-            {{ current_stage }}
-        </div>
+        <div class="stage-title">🚩 CURRENT STAGE</div>
+        <div class="stage-name">{{ current_stage }}</div>
     </div>
 </div>
 
-<!-- ✅ GROUP STAGE STATUS MESSAGE -->
+<!-- ✅ GROUP STATUS -->
 <div class="container mt-2">
-
     {% if current_stage == "🟡 Group Stage" %}
-
         {% if group_stage_complete %}
             <div class="card text-center p-2"
                  style="border:2px solid #00ff88; box-shadow:0 0 15px #00ff88;">
-                <strong style="color:#00ff88; font-size:1.2rem;">
+                <strong style="color:#00ff88;">
                     ✅ Group Stage Completed — Round of 16 Ready
                 </strong>
             </div>
         {% else %}
             <div class="card text-center p-2"
                  style="border:2px solid #ffcc00; box-shadow:0 0 15px #ffcc00;">
-                <strong style="color:#ffcc00; font-size:1.2rem;">
+                <strong style="color:#ffcc00;">
                     ⚠ Group Stage In Progress — {{ remaining_group_matches }} Match(es) Remaining
                 </strong>
             </div>
         {% endif %}
-
     {% endif %}
+</div>
 
+<!-- ✅ TOURNAMENT PROGRESS TRACKER -->
+<div class="container mt-3">
+    <div class="card text-center p-3"
+         style="border:2px solid #00f2ff; box-shadow:0 0 20px #00f2ff;">
+
+        <div style="margin-bottom:10px; font-weight:bold;">
+            🏆 Tournament Progress
+        </div>
+
+        <div style="display:flex; justify-content:center; gap:15px; flex-wrap:wrap;">
+
+            <span class="progress-item"
+                  style="color:{% if group_done %}#00ff88{% else %}#ffc107{% endif %};">
+                🟡 Group
+            </span>
+
+            →
+            <span class="progress-item"
+                  style="color:{% if r16_done %}#00ff88{% elif r16_exists %}#00f2ff{% else %}#777{% endif %};">
+                🔵 R16
+            </span>
+
+            →
+            <span class="progress-item"
+                  style="color:{% if quarter_done %}#00ff88{% elif quarter_exists %}#bb66ff{% else %}#777{% endif %};">
+                🟣 Quarter
+            </span>
+
+            →
+            <span class="progress-item"
+                  style="color:{% if semi_done %}#00ff88{% elif semi_exists %}#ff8800{% else %}#777{% endif %};">
+                🟠 Semi
+            </span>
+
+            →
+            <span class="progress-item"
+                  style="color:{% if final_done %}#00ff88{% elif final_exists %}#ff4444{% else %}#777{% endif %};">
+                🔴 Final
+            </span>
+
+        </div>
+
+    </div>
 </div>
 
 <div class="container mt-4">

@@ -30,6 +30,7 @@ def tournament_finished():
 @main.app_context_processor
 def inject_stage_status():
 
+    # ✅ Determine current stage
     if stage_exists("final") and stage_complete("final"):
         current_stage = "🏆 Tournament Completed"
     elif stage_exists("final"):
@@ -43,12 +44,19 @@ def inject_stage_status():
     else:
         current_stage = "🟡 Group Stage"
 
+    # ✅ Group stage info
     group_matches = Match.query.filter_by(stage="group").all()
     remaining_group_matches = sum(
         1 for m in group_matches if not m.is_completed
     )
-
     group_stage_complete = stage_complete("group")
+
+    # ✅ Stage progression flags
+    group_done = stage_complete("group")
+    r16_done = stage_complete("r16")
+    quarter_done = stage_complete("quarter")
+    semi_done = stage_complete("semi")
+    final_done = stage_complete("final")
 
     return {
         "r16_exists": stage_exists("r16"),
@@ -58,7 +66,12 @@ def inject_stage_status():
         "final_exists": stage_exists("final"),
         "current_stage": current_stage,
         "remaining_group_matches": remaining_group_matches,
-        "group_stage_complete": group_stage_complete
+        "group_stage_complete": group_stage_complete,
+        "group_done": group_done,
+        "r16_done": r16_done,
+        "quarter_done": quarter_done,
+        "semi_done": semi_done,
+        "final_done": final_done
     }
 
 # ==========================================================
@@ -118,7 +131,7 @@ def group_fixtures():
     return render_template("group_fixtures.html", data=data)
 
 # ==========================================================
-# STANDINGS (UPDATED WITH QUALIFICATION STATUS)
+# STANDINGS (WITH QUALIFICATION STATUS)
 # ==========================================================
 
 @main.route("/standings")
