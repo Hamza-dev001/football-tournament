@@ -177,8 +177,53 @@
 
 <!-- ✅ TOURNAMENT PROGRESS TRACKER -->
 <div class="container mt-3">
-    <div class="card text-center p-3"
-         style="border:2px solid #00f2ff; box-shadow:0 0 20px #00f2ff;">
+    <div class="card text-center p-3 stage-card">
+
+        <div style="font-size:1.4rem; font-weight:bold; margin-bottom:15px;
+                    color:#ffffff; text-shadow:0 0 15px #00f2ff;">
+            🏆 TOURNAMENT PROGRESS
+        </div>
+
+        <div style="display:flex; justify-content:center; gap:20px; flex-wrap:wrap;
+                    font-size:1.3rem; font-weight:bold;">
+
+            <span style="color:{% if group_done %}#00ff88{% else %}#ffc107{% endif %};
+                         text-shadow:0 0 12px {% if group_done %}#00ff88{% else %}#ffc107{% endif %};">
+                ● Group
+            </span>
+
+            <span style="color:#555;">→</span>
+
+            <span style="color:{% if r16_done %}#00ff88{% elif r16_exists %}#00f2ff{% else %}#555{% endif %};
+                         text-shadow:0 0 12px {% if r16_done %}#00ff88{% elif r16_exists %}#00f2ff{% else %}#000{% endif %};">
+                ● R16
+            </span>
+
+            <span style="color:#555;">→</span>
+
+            <span style="color:{% if quarter_done %}#00ff88{% elif quarter_exists %}#bb66ff{% else %}#555{% endif %};
+                         text-shadow:0 0 12px {% if quarter_done %}#00ff88{% elif quarter_exists %}#bb66ff{% else %}#000{% endif %};">
+                ● Quarter
+            </span>
+
+            <span style="color:#555;">→</span>
+
+            <span style="color:{% if semi_done %}#00ff88{% elif semi_exists %}#ff8800{% else %}#555{% endif %};
+                         text-shadow:0 0 12px {% if semi_done %}#00ff88{% elif semi_exists %}#ff8800{% else %}#000{% endif %};">
+                ● Semi
+            </span>
+
+            <span style="color:#555;">→</span>
+
+            <span style="color:{% if final_done %}#00ff88{% elif final_exists %}#ff4444{% else %}#555{% endif %};
+                         text-shadow:0 0 12px {% if final_done %}#00ff88{% elif final_exists %}#ff4444{% else %}#000{% endif %};">
+                ● Final
+            </span>
+
+        </div>
+
+    </div>
+</div>
 
         <div style="margin-bottom:10px; font-weight:bold;">
             🏆 Tournament Progress
