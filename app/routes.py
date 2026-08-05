@@ -23,15 +23,33 @@ def stage_complete(stage_name):
 def tournament_finished():
     return stage_complete("final")
 
-# ✅ Inject stage status globally into templates
+# ==========================================================
+# GLOBAL STAGE CONTEXT (VISIBLE EVERYWHERE)
+# ==========================================================
+
 @main.app_context_processor
 def inject_stage_status():
+
+    if stage_exists("final") and stage_complete("final"):
+        current_stage = "🏆 Tournament Completed"
+    elif stage_exists("final"):
+        current_stage = "🔴 Final"
+    elif stage_exists("semi"):
+        current_stage = "🟠 Semifinal"
+    elif stage_exists("quarter"):
+        current_stage = "🟣 Quarterfinal"
+    elif stage_exists("r16"):
+        current_stage = "🔵 Round of 16"
+    else:
+        current_stage = "🟡 Group Stage"
+
     return {
         "r16_exists": stage_exists("r16"),
         "quarter_exists": stage_exists("quarter"),
         "semi_exists": stage_exists("semi"),
         "third_exists": stage_exists("third"),
-        "final_exists": stage_exists("final")
+        "final_exists": stage_exists("final"),
+        "current_stage": current_stage
     }
 
 # ==========================================================
