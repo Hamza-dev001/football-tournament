@@ -8,7 +8,7 @@ from . import db
 main = Blueprint("main", __name__)
 
 # ==========================================================
-# STAGE LOCKING UTILITIES
+# STAGE UTILITIES
 # ==========================================================
 
 def stage_exists(stage_name):
@@ -23,8 +23,19 @@ def stage_complete(stage_name):
 def tournament_finished():
     return stage_complete("final")
 
+# ✅ Inject stage status globally into templates
+@main.app_context_processor
+def inject_stage_status():
+    return {
+        "r16_exists": stage_exists("r16"),
+        "quarter_exists": stage_exists("quarter"),
+        "semi_exists": stage_exists("semi"),
+        "third_exists": stage_exists("third"),
+        "final_exists": stage_exists("final")
+    }
+
 # ==========================================================
-# HOME (PUBLIC)
+# HOME
 # ==========================================================
 
 @main.route("/")
@@ -33,7 +44,7 @@ def home():
     return render_template("home.html", groups=groups)
 
 # ==========================================================
-# RULES PAGE
+# RULES
 # ==========================================================
 
 @main.route("/rules")
@@ -41,7 +52,7 @@ def rules():
     return render_template("rules.html")
 
 # ==========================================================
-# GROUP FIXTURES (PUBLIC) — WITH PROGRESSIVE MATCHDAYS
+# GROUP FIXTURES (PROGRESSIVE MATCHDAYS)
 # ==========================================================
 
 @main.route("/group-fixtures")
@@ -51,25 +62,24 @@ def group_fixtures():
     data = []
 
     for group in groups:
-        matches = Match.query.filter_by(
-            stage="group",
-            group_id=group.id
-        ).order_by(Match.matchday).all()
+        matches = (
+            Match.query
+            .filter_by(stage="group", group_id=group.id)
+            .order_by(Match.matchday, Match.id)
+            .all()
+        )
 
         matchdays = {}
 
         for match in matches:
             matchdays.setdefault(match.matchday, []).append(match)
 
-        # ✅ Progressive Matchday Logic
         visible_matchdays = {}
 
         for matchday in sorted(matchdays.keys()):
             matches_in_day = matchdays[matchday]
-
             visible_matchdays[matchday] = matches_in_day
 
-            # Stop if current matchday not fully completed
             if not all(m.is_completed for m in matches_in_day):
                 break
 
@@ -81,7 +91,7 @@ def group_fixtures():
     return render_template("group_fixtures.html", data=data)
 
 # ==========================================================
-# STANDINGS (PUBLIC)
+# STANDINGS
 # ==========================================================
 
 @main.route("/standings")
@@ -154,7 +164,6 @@ def standings():
             "table": table
         })
 
-    # ✅ OVERALL TOURNAMENT STATS
     all_teams = []
     for group in standings_data:
         for team in group["table"]:
@@ -171,7 +180,7 @@ def standings():
     )
 
 # ==========================================================
-# SETUP (ADMIN ONLY)
+# SETUP
 # ==========================================================
 
 @main.route("/setup")
@@ -218,7 +227,7 @@ def setup():
     return "✅ Groups Created Successfully!"
 
 # ==========================================================
-# GENERATE GROUP FIXTURES (ADMIN ONLY)
+# GENERATE GROUP FIXTURES
 # ==========================================================
 
 @main.route("/generate-group-fixtures")
@@ -263,7 +272,7 @@ def generate_group_fixtures():
     return "✅ Group Fixtures Generated!"
 
 # ==========================================================
-# PUBLIC VIEW ROUTES
+# PUBLIC STAGE ROUTES
 # ==========================================================
 
 @main.route("/r16")

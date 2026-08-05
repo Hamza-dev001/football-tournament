@@ -54,11 +54,6 @@
             text-shadow: 0 0 6px #00f2ff;
         }
 
-        .qualified-row {
-            background-color: rgba(0, 255, 120, 0.15) !important;
-            border-left: 4px solid #00ff88;
-        }
-
     </style>
 </head>
 
@@ -91,35 +86,40 @@
                     <a class="nav-link" href="{{ url_for('main.standings') }}">Standings</a>
                 </li>
 
+                {% if r16_exists %}
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('main.r16') }}">Round of 16</a>
                 </li>
+                {% endif %}
 
+                {% if quarter_exists %}
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('main.quarterfinal') }}">Quarterfinal</a>
                 </li>
+                {% endif %}
 
+                {% if semi_exists %}
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('main.semifinal') }}">Semifinal</a>
                 </li>
+                {% endif %}
 
+                {% if third_exists %}
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('main.third_place') }}">Third Place</a>
                 </li>
+                {% endif %}
 
+                {% if final_exists %}
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('main.final') }}">Final</a>
                 </li>
-
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('main.bracket') }}">Bracket</a>
-                </li>
+                {% endif %}
 
                 <li class="nav-item">
                     <a class="nav-link rules-link" href="{{ url_for('main.rules') }}">Rules</a>
                 </li>
 
-                <!-- ✅ ADMIN / LOGOUT LOGIC -->
                 {% if current_user.is_authenticated %}
                     <li class="nav-item">
                         <a class="nav-link text-warning" href="{{ url_for('admin.dashboard') }}">Admin</a>
