@@ -1,117 +1,90 @@
-@admin.route("/overview")
-@login_required
-def overview():
+{% extends "base.html" %}
+{% block content %}
 
-    groups = Group.query.all()
+<h2 class="mb-4" style="color:#00f2ff; text-shadow:0 0 10px #00f2ff;">
+    🏆 Tournament Stage Control
+</h2>
 
-    pot1 = []   # 1st place teams
-    pot2 = []   # 2nd place teams
-    pot3 = []   # 3rd place teams
-    fourth_placed = []
+<div class="card p-4 mb-4"
+     style="border:2px solid #00f2ff; box-shadow:0 0 15px #00f2ff;">
 
-    # ✅ Build standings per group
-    for group in groups:
+    {% if context.group_complete and not context.r16_exists %}
+        <a href="/generate-r16" class="btn btn-primary mb-2">
+            Generate Round of 16
+        </a>
+    {% endif %}
 
-        table = []
+    {% if context.r16_complete and not context.quarter_exists %}
+        <a href="/generate-quarter" class="btn btn-primary mb-2">
+            Generate Quarter Final
+        </a>
+    {% endif %}
 
-        for team in group.teams:
+    {% if context.quarter_complete and not context.semi_exists %}
+        <a href="/generate-semi" class="btn btn-primary mb-2">
+            Generate Semi Final
+        </a>
+    {% endif %}
 
-            points = 0
-            gf = 0
-            ga = 0
+    {% if context.semi_complete and not context.final_exists %}
+        <a href="/generate-final" class="btn btn-danger mb-2">
+            Generate Final & Third Place
+        </a>
+    {% endif %}
 
-            matches = Match.query.filter(
-                Match.stage == "group",
-                or_(
-                    Match.home_team_id == team.id,
-                    Match.away_team_id == team.id
-                )
-            ).all()
+    {% if context.tournament_finished %}
+        <div class="alert alert-success mt-3">
+            🏆 Tournament Completed!
+        </div>
+    {% endif %}
 
-            for m in matches:
-                if m.home_score is None:
-                    continue
+</div>
 
-                if m.home_team_id == team.id:
-                    gf += m.home_score
-                    ga += m.away_score
-                    if m.home_score > m.away_score:
-                        points += 3
-                    elif m.home_score == m.away_score:
-                        points += 1
-                else:
-                    gf += m.away_score
-                    ga += m.home_score
-                    if m.away_score > m.home_score:
-                        points += 3
-                    elif m.away_score == m.home_score:
-                        points += 1
+{% if not context.r16_exists %}
 
-            table.append({
-                "team": team,
-                "group": group.name,
-                "points": points,
-                "gd": gf - ga,
-                "gf": gf
-            })
+<!-- ✅ QUALIFICATION PREVIEW -->
+<div class="card p-4 mt-4"
+     style="border:2px solid #00ff88; box-shadow:0 0 15px #00ff88;">
 
-        # Sort group standings
-        table.sort(key=lambda x: (x["points"], x["gd"], x["gf"]), reverse=True)
+    <h4 style="color:#00ff88; text-shadow:0 0 8px #00ff88;">
+        ✅ Live Qualification Preview
+    </h4>
 
-        # ✅ Add top 3 explicitly
-        pot1.append(table[0])
-        pot2.append(table[1])
-        pot3.append(table[2])
+    <ul class="list-group mt-3">
+        {% for item in context.qualified_teams %}
+        <li class="list-group-item"
+            style="background:#111; color:#ffffff; border:1px solid #00ff88;">
+            {{ item.team.name }}
+            <span style="color:#ffc107;">
+                ({{ item.points }} pts, GD {{ item.gd }})
+            </span>
+        </li>
+        {% endfor %}
+    </ul>
 
-        # ✅ Store 4th placed for best selection
-        if len(table) > 3:
-            fourth_placed.append(table[3])
+</div>
 
-    # ✅ Determine Best 4th
-    fourth_placed.sort(key=lambda x: (x["points"], x["gd"], x["gf"]), reverse=True)
-    best_fourth = fourth_placed[0] if fourth_placed else None
+<!-- ✅ PAIRING PREVIEW -->
+<div class="card p-4 mt-4"
+     style="border:2px solid #ff8800; box-shadow:0 0 15px #ff8800;">
 
-    if best_fourth:
-        pot3.append(best_fourth)  # Add best 4th into pot3
+    <h4 style="color:#ff8800; text-shadow:0 0 8px #ff8800;">
+        🔀 R16 Pairing Preview
+    </h4>
 
-    # ✅ Combine all qualified teams
-    qualified_teams = pot1 + pot2 + pot3
+    <ul class="list-group mt-3">
+        {% for team1, team2 in context.pairing_preview %}
+        <li class="list-group-item"
+            style="background:#111; color:#ffffff; border:1px solid #ff8800;">
+            {{ team1.team.name }}
+            <span style="color:#00f2ff;">vs</span>
+            {{ team2.team.name }}
+        </li>
+        {% endfor %}
+    </ul>
 
-    # ✅ Semi-Random Structured Pairing
-    import random
-    pairing_preview = []
+</div>
 
-    available_pot3 = pot3.copy()
+{% endif %}
 
-    # Pot1 vs Pot3
-    for team1 in pot1:
-        possible_opponents = [
-            t for t in available_pot3
-            if t["group"] != team1["group"]
-        ]
-
-        if possible_opponents:
-            opponent = random.choice(possible_opponents)
-            pairing_preview.append((team1, opponent))
-            available_pot3.remove(opponent)
-
-    # Pot2 vs remaining Pot3
-    for team2 in pot2:
-        possible_opponents = [
-            t for t in available_pot3
-            if t["group"] != team2["group"]
-        ]
-
-        if possible_opponents:
-            opponent = random.choice(possible_opponents)
-            pairing_preview.append((team2, opponent))
-            available_pot3.remove(opponent)
-
-    context = {
-        "group_complete": stage_complete("group"),
-        "r16_exists": stage_exists("r16"),
-        "qualified_teams": qualified_teams,
-        "pairing_preview": pairing_preview
-    }
-
-    return render_template("overview.html", context=context)
+{% endblock %}
