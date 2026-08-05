@@ -3,6 +3,7 @@
 
 <h2 class="mb-4">🏆 Tournament Stage Control</h2>
 
+<!-- ✅ STAGE CONTROL BUTTONS -->
 <div class="card bg-dark text-white p-4">
 
     {% if context.group_complete and not context.r16_exists %}
@@ -51,7 +52,19 @@
         </li>
         {% endfor %}
     </ul>
+</div>
 
+<!-- ✅ R16 PAIRING PREVIEW -->
+<div class="card p-4 mt-4 bg-dark text-white">
+    <h4 style="color:#00f2ff;">🔀 R16 Pairing Preview (Structured Semi-Random)</h4>
+
+    <ul class="list-group mt-3">
+        {% for team1, team2 in context.pairing_preview %}
+        <li class="list-group-item bg-dark text-white border-secondary">
+            {{ team1.team.name }} vs {{ team2.team.name }}
+        </li>
+        {% endfor %}
+    </ul>
 </div>
 
 {% endif %}

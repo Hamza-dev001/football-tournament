@@ -1,21 +1,19 @@
 from flask import Blueprint, render_template, redirect, url_for, request, session
 from flask_login import login_user, login_required, logout_user
+from sqlalchemy import or_
+from datetime import datetime
 from .models import User, Match, Group
 from . import db
-from datetime import datetime
-from sqlalchemy import or_
-
-# ✅ Import stage utility functions from routes
 from .routes import stage_exists, stage_complete
 
 admin = Blueprint("admin", __name__)
 
-# ✅ TOURNAMENT START DATE
+# ✅ TOURNAMENT START DATE (CHANGE YEAR IF NEEDED)
 TOURNAMENT_START = datetime(2026, 8, 4, 10, 0, 0)
 
 
 # ==========================================================
-# CALCULATE CURRENT MATCHDAY
+# MATCHDAY CALCULATION
 # ==========================================================
 
 def get_current_matchday():
@@ -36,11 +34,12 @@ def get_current_matchday():
 
 
 # ==========================================================
-# CHECK IF MATCH IS LOCKED
+# MATCH LOCK CHECK
 # ==========================================================
 
 def is_match_locked(match):
 
+    # Override bypass
     if session.get("override_deadline"):
         return False
 
@@ -49,6 +48,7 @@ def is_match_locked(match):
 
     current_matchday = get_current_matchday()
 
+    # Lock everything except active matchday
     return match.matchday != current_matchday
 
 
@@ -155,7 +155,7 @@ def override_deadline():
 
 
 # ==========================================================
-# ADMIN OVERVIEW (STAGE CONTROL + QUALIFICATION PREVIEW)
+# ADMIN OVERVIEW (STAGE CONTROL + QUALIFICATION + PAIRING)
 # ==========================================================
 
 @admin.route("/overview")
@@ -166,6 +166,7 @@ def overview():
     qualified_teams = []
     fourth_placed = []
 
+    # ✅ Build group standings
     for group in groups:
 
         table = []
@@ -205,6 +206,7 @@ def overview():
 
             table.append({
                 "team": team,
+                "group": group.name,
                 "points": points,
                 "gd": gf - ga,
                 "gf": gf
@@ -212,24 +214,56 @@ def overview():
 
         table.sort(key=lambda x: (x["points"], x["gd"], x["gf"]), reverse=True)
 
+        # ✅ Top 3 qualify
         qualified_teams.extend(table[:3])
 
         if len(table) > 3:
             fourth_placed.append(table[3])
 
+    # ✅ Best 4th selection
     fourth_placed.sort(key=lambda x: (x["points"], x["gd"], x["gf"]), reverse=True)
-
     best_fourth = fourth_placed[0] if fourth_placed else None
 
     if best_fourth:
         qualified_teams.append(best_fourth)
 
+    # ✅ Build Structured Semi-Random Pairing
+    import random
+    pairing_preview = []
+
+    pot1 = qualified_teams[:5]
+    pot2 = qualified_teams[5:10]
+    pot3 = qualified_teams[10:15]
+
+    available_pot3 = pot3.copy()
+
+    for team1 in pot1:
+        possible_opponents = [
+            t for t in available_pot3
+            if t["group"] != team1["group"]
+        ]
+
+        if possible_opponents:
+            opponent = random.choice(possible_opponents)
+            pairing_preview.append((team1, opponent))
+            available_pot3.remove(opponent)
+
+    for team2 in pot2:
+        possible_opponents = [
+            t for t in available_pot3
+            if t["group"] != team2["group"]
+        ]
+
+        if possible_opponents:
+            opponent = random.choice(possible_opponents)
+            pairing_preview.append((team2, opponent))
+            available_pot3.remove(opponent)
+
     context = {
-        "group_exists": stage_exists("group"),
         "group_complete": stage_complete("group"),
         "r16_exists": stage_exists("r16"),
         "qualified_teams": qualified_teams,
-        "best_fourth": best_fourth
+        "pairing_preview": pairing_preview
     }
 
     return render_template("overview.html", context=context)
