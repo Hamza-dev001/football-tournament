@@ -41,7 +41,7 @@
                            value="{{ match.home_score if match.home_score is not none else '' }}"
                            class="form-control text-center"
                            style="width:80px;"
-                           {% if match.stage == 'group' and match.matchday < current_matchday and not override_active %}disabled{% endif %}>
+                           {% if match.stage == 'group' and match.matchday != current_matchday and not override_active %}disabled{% endif %}
 
                     <span>vs</span>
 
