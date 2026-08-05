@@ -70,18 +70,33 @@
 
             <tbody>
                 {% for team in item.table %}
-                <tr class="{% if loop.index <= 2 %}qualified-row{% endif %}">
+                <tr class="{% if team.status == 'qualified' %}qualified-row{% endif %}">
                     <td>{{ loop.index }}</td>
-                    <td style="font-weight:bold;">{{ team.team.name }}</td>
+
+                    <td style="font-weight:bold;">
+                        {{ team.team.name }}
+
+                        {% if team.status == "qualified" %}
+                            <span class="badge bg-success ms-2">Qualified</span>
+                        {% elif team.status == "fourth" %}
+                            <span class="badge bg-warning text-dark ms-2">Best 4th</span>
+                        {% else %}
+                            <span class="badge bg-danger ms-2">Eliminated</span>
+                        {% endif %}
+                    </td>
+
                     <td>{{ team.played }}</td>
                     <td>{{ team.wins }}</td>
                     <td>{{ team.draws }}</td>
                     <td>{{ team.losses }}</td>
+
                     <td style="color:#ffc107; font-weight:bold;">
                         {{ team.gf }}
                     </td>
+
                     <td>{{ team.ga }}</td>
                     <td>{{ team.gd }}</td>
+
                     <td>
                         <strong style="color:#00f2ff;">
                             {{ team.points }}
