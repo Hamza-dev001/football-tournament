@@ -4,6 +4,9 @@ from .models import User, Match
 from . import db
 from datetime import datetime
 
+# ✅ Import stage utility functions from routes
+from .routes import stage_exists, stage_complete
+
 admin = Blueprint("admin", __name__)
 
 # ✅ TOURNAMENT START DATE (MAKE SURE YEAR IS CORRECT)
@@ -37,11 +40,11 @@ def get_current_matchday():
 
 def is_match_locked(match):
 
-    # Override bypasses lock
+    # Override bypass
     if session.get("override_deadline"):
         return False
 
-    # Only apply locking for group stage
+    # Only group stage locked by matchday
     if match.stage != "group":
         return False
 
@@ -161,4 +164,22 @@ def override_deadline():
 @admin.route("/overview")
 @login_required
 def overview():
-    return render_template("overview.html")
+
+    context = {
+        "group_exists": stage_exists("group"),
+        "group_complete": stage_complete("group"),
+
+        "r16_exists": stage_exists("r16"),
+        "r16_complete": stage_complete("r16"),
+
+        "quarter_exists": stage_exists("quarter"),
+        "quarter_complete": stage_complete("quarter"),
+
+        "semi_exists": stage_exists("semi"),
+        "semi_complete": stage_complete("semi"),
+
+        "final_exists": stage_exists("final"),
+        "tournament_finished": stage_complete("final")
+    }
+
+    return render_template("overview.html", context=context)
