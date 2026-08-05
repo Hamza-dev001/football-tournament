@@ -124,6 +124,20 @@
                     <a class="nav-link rules-link" href="{{ url_for('main.rules') }}">Rules</a>
                 </li>
 
+                <!-- ✅ ADMIN LINKS RESTORED -->
+                {% if current_user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link text-warning" href="{{ url_for('admin.dashboard') }}">Admin</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-danger" href="{{ url_for('admin.logout') }}">Logout</a>
+                    </li>
+                {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link text-warning" href="{{ url_for('admin.login') }}">Admin</a>
+                    </li>
+                {% endif %}
+
             </ul>
         </div>
     </div>
@@ -135,7 +149,7 @@
         <div style="font-size:1.4rem; font-weight:bold; margin-bottom:5px;">
             🚩 CURRENT STAGE
         </div>
-        <div style="font-size:2rem; font-weight:bold; color:#ffc107; text-shadow:0 0 12px #ffc107;">
+        <div style="font-size:2rem; font-weight:bold; color:#ffc107;">
             {{ current_stage }}
         </div>
     </div>
