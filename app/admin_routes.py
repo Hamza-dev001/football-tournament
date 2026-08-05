@@ -6,8 +6,8 @@ from datetime import datetime
 
 admin = Blueprint("admin", __name__)
 
-# ✅ TOURNAMENT START DATE (IMPORTANT)
-TOURNAMENT_START = datetime(2026, 8, 4, 10, 0, 0)  # Adjust year if needed
+# ✅ TOURNAMENT START DATE (MAKE SURE YEAR IS CORRECT)
+TOURNAMENT_START = datetime(2026, 8, 4, 10, 0, 0)
 
 
 # ==========================================================
@@ -25,7 +25,6 @@ def get_current_matchday():
 
     current_matchday = days_passed + 1
 
-    # Only 3 matchdays in group stage
     if current_matchday > 3:
         current_matchday = 3
 
@@ -37,7 +36,8 @@ def get_current_matchday():
 # ==========================================================
 
 def is_match_locked(match):
-    # Admin override bypasses lock
+
+    # Override bypasses lock
     if session.get("override_deadline"):
         return False
 
@@ -127,7 +127,7 @@ def bulk_update():
 
     for match in matches:
 
-        # ✅ Skip locked matches
+        # Skip locked matches
         if is_match_locked(match):
             continue
 
@@ -152,3 +152,13 @@ def bulk_update():
 def override_deadline():
     session["override_deadline"] = True
     return redirect(url_for("admin.dashboard"))
+
+
+# ==========================================================
+# ADMIN OVERVIEW (STAGE CONTROL)
+# ==========================================================
+
+@admin.route("/overview")
+@login_required
+def overview():
+    return render_template("overview.html")
