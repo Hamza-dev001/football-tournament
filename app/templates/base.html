@@ -63,11 +63,6 @@
             text-shadow: 0 0 6px #00f2ff;
         }
 
-        .progress-stage {
-            font-weight: bold;
-            font-size: 1.15rem;
-        }
-
     </style>
 </head>
 
@@ -176,42 +171,53 @@
     {% endif %}
 </div>
 
-<!-- ✅ TOURNAMENT PROGRESS -->
+<!-- ✅ UPDATED TOURNAMENT PROGRESS -->
 <div class="container mt-3 mb-4">
     <div class="card stage-card text-center p-4">
 
-        <div style="margin-bottom:15px; font-weight:bold;">
+        <div style="margin-bottom:15px; font-weight:bold; font-size:1.3rem; color:#ffffff;">
             🏆 TOURNAMENT PROGRESS
         </div>
 
-        <div style="display:flex; justify-content:center; gap:25px; flex-wrap:wrap;">
+        <div style="display:flex; justify-content:center; gap:25px; flex-wrap:wrap;
+                    font-size:1.3rem; font-weight:bold;">
 
-            <span class="progress-stage"
-                  style="color:{% if group_done %}#00ff88{% else %}#ffc107{% endif %};">
+            <span style="
+                color:{% if group_done %}#00ff88{% else %}#ffc107{% endif %};
+                text-shadow:0 0 10px {% if group_done %}#00ff88{% else %}#ffc107{% endif %};
+            ">
                 ● Group
             </span>
 
             →
-            <span class="progress-stage"
-                  style="color:{% if r16_done %}#00ff88{% elif r16_exists %}#00f2ff{% else %}#cccccc{% endif %};">
+            <span style="
+                color:{% if r16_done %}#00ff88{% elif r16_exists %}#00f2ff{% else %}#ffffff{% endif %};
+                text-shadow:{% if r16_done or r16_exists %}0 0 10px #00f2ff{% else %}none{% endif %};
+            ">
                 ● R16
             </span>
 
             →
-            <span class="progress-stage"
-                  style="color:{% if quarter_done %}#00ff88{% elif quarter_exists %}#bb66ff{% else %}#cccccc{% endif %};">
+            <span style="
+                color:{% if quarter_done %}#00ff88{% elif quarter_exists %}#bb66ff{% else %}#ffffff{% endif %};
+                text-shadow:{% if quarter_done or quarter_exists %}0 0 10px #bb66ff{% else %}none{% endif %};
+            ">
                 ● Quarter
             </span>
 
             →
-            <span class="progress-stage"
-                  style="color:{% if semi_done %}#00ff88{% elif semi_exists %}#ff8800{% else %}#cccccc{% endif %};">
+            <span style="
+                color:{% if semi_done %}#00ff88{% elif semi_exists %}#ff8800{% else %}#ffffff{% endif %};
+                text-shadow:{% if semi_done or semi_exists %}0 0 10px #ff8800{% else %}none{% endif %};
+            ">
                 ● Semi
             </span>
 
             →
-            <span class="progress-stage"
-                  style="color:{% if final_done %}#00ff88{% elif final_exists %}#ff4444{% else %}#cccccc{% endif %};">
+            <span style="
+                color:{% if final_done %}#00ff88{% elif final_exists %}#ff4444{% else %}#ffffff{% endif %};
+                text-shadow:{% if final_done or final_exists %}0 0 10px #ff4444{% else %}none{% endif %};
+            ">
                 ● Final
             </span>
 
