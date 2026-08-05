@@ -30,6 +30,7 @@ def tournament_finished():
 @main.app_context_processor
 def inject_stage_status():
 
+    # ✅ Determine current stage
     if stage_exists("final") and stage_complete("final"):
         current_stage = "🏆 Tournament Completed"
     elif stage_exists("final"):
@@ -43,13 +44,23 @@ def inject_stage_status():
     else:
         current_stage = "🟡 Group Stage"
 
+    # ✅ Count remaining group matches
+    group_matches = Match.query.filter_by(stage="group").all()
+    remaining_group_matches = sum(
+        1 for m in group_matches if not m.is_completed
+    )
+
+    group_stage_complete = stage_complete("group")
+
     return {
         "r16_exists": stage_exists("r16"),
         "quarter_exists": stage_exists("quarter"),
         "semi_exists": stage_exists("semi"),
         "third_exists": stage_exists("third"),
         "final_exists": stage_exists("final"),
-        "current_stage": current_stage
+        "current_stage": current_stage,
+        "remaining_group_matches": remaining_group_matches,
+        "group_stage_complete": group_stage_complete
     }
 
 # ==========================================================
@@ -144,22 +155,18 @@ def standings():
                     gf += m.home_score
                     ga += m.away_score
                     if m.home_score > m.away_score:
-                        wins += 1
-                        points += 3
+                        wins += 1; points += 3
                     elif m.home_score == m.away_score:
-                        draws += 1
-                        points += 1
+                        draws += 1; points += 1
                     else:
                         losses += 1
                 else:
                     gf += m.away_score
                     ga += m.home_score
                     if m.away_score > m.home_score:
-                        wins += 1
-                        points += 3
+                        wins += 1; points += 3
                     elif m.away_score == m.home_score:
-                        draws += 1
-                        points += 1
+                        draws += 1; points += 1
                     else:
                         losses += 1
 

@@ -171,6 +171,31 @@
     </div>
 </div>
 
+<!-- ✅ GROUP STAGE STATUS MESSAGE -->
+<div class="container mt-2">
+
+    {% if current_stage == "🟡 Group Stage" %}
+
+        {% if group_stage_complete %}
+            <div class="card text-center p-2"
+                 style="border:2px solid #00ff88; box-shadow:0 0 15px #00ff88;">
+                <strong style="color:#00ff88; font-size:1.2rem;">
+                    ✅ Group Stage Completed — Round of 16 Ready
+                </strong>
+            </div>
+        {% else %}
+            <div class="card text-center p-2"
+                 style="border:2px solid #ffcc00; box-shadow:0 0 15px #ffcc00;">
+                <strong style="color:#ffcc00; font-size:1.2rem;">
+                    ⚠ Group Stage In Progress — {{ remaining_group_matches }} Match(es) Remaining
+                </strong>
+            </div>
+        {% endif %}
+
+    {% endif %}
+
+</div>
+
 <div class="container mt-4">
     {% block content %}{% endblock %}
 </div>
