@@ -6,7 +6,7 @@ from datetime import datetime
 
 admin = Blueprint("admin", __name__)
 
-# ✅ TOURNAMENT START DATE (VERY IMPORTANT)
+# ✅ TOURNAMENT START DATE (IMPORTANT)
 TOURNAMENT_START = datetime(2026, 8, 4, 10, 0, 0)  # Adjust year if needed
 
 
@@ -25,7 +25,7 @@ def get_current_matchday():
 
     current_matchday = days_passed + 1
 
-    # Group stage has 3 matchdays
+    # Only 3 matchdays in group stage
     if current_matchday > 3:
         current_matchday = 3
 
@@ -36,16 +36,19 @@ def get_current_matchday():
 # CHECK IF MATCH IS LOCKED
 # ==========================================================
 
-def is_match_locked(matchday):
-
-    # Admin override bypass
+def is_match_locked(match):
+    # Admin override bypasses lock
     if session.get("override_deadline"):
+        return False
+
+    # Only apply locking for group stage
+    if match.stage != "group":
         return False
 
     current_matchday = get_current_matchday()
 
-    # Lock only previous matchdays
-    return matchday < current_matchday
+    # Lock everything except active matchday
+    return match.matchday != current_matchday
 
 
 # ==========================================================
@@ -96,7 +99,12 @@ def dashboard():
     current_matchday = get_current_matchday()
 
     for stage in stages:
-        matches = Match.query.filter_by(stage=stage).all()
+        matches = (
+            Match.query
+            .filter_by(stage=stage)
+            .order_by(Match.matchday, Match.id)
+            .all()
+        )
         data[stage] = matches
 
     return render_template(
@@ -115,12 +123,12 @@ def dashboard():
 @login_required
 def bulk_update():
 
-    matches = Match.query.all()
+    matches = Match.query.order_by(Match.matchday, Match.id).all()
 
     for match in matches:
 
-        # Lock only previous matchdays
-        if match.stage == "group" and is_match_locked(match.matchday):
+        # ✅ Skip locked matches
+        if is_match_locked(match):
             continue
 
         home_score = request.form.get(f"home_{match.id}")

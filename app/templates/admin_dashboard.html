@@ -4,8 +4,7 @@
 <h2 class="mb-4">⚙ Admin Dashboard</h2>
 
 <div class="alert alert-info">
-    📅 Current Matchday (System Calculated): 
-    <strong>{{ current_matchday }}</strong>
+    📅 Current Matchday: <strong>{{ current_matchday }}</strong>
 </div>
 
 {% if override_active %}
@@ -16,7 +15,7 @@
 
 <form method="POST" action="{{ url_for('admin.override_deadline') }}" class="mb-3">
     <button type="submit" class="btn btn-danger">
-        ⚠ Override Deadline (Admin Only)
+        ⚠ Override Deadline
     </button>
 </form>
 
@@ -30,7 +29,10 @@
 
             {% for match in matches %}
 
-                <div class="d-flex justify-content-between align-items-center mb-2">
+                {% set locked = (match.stage == 'group' and match.matchday != current_matchday and not override_active) %}
+
+                <div class="d-flex justify-content-between align-items-center mb-2 p-2
+                    {% if locked %}bg-secondary border border-danger{% endif %}">
 
                     <strong style="width:30%;">
                         {{ match.home_team.name }}
@@ -41,7 +43,7 @@
                            value="{{ match.home_score if match.home_score is not none else '' }}"
                            class="form-control text-center"
                            style="width:80px;"
-                           {% if match.stage == 'group' and match.matchday != current_matchday and not override_active %}disabled{% endif %}
+                           {% if locked %}disabled{% endif %}>
 
                     <span>vs</span>
 
@@ -50,11 +52,15 @@
                            value="{{ match.away_score if match.away_score is not none else '' }}"
                            class="form-control text-center"
                            style="width:80px;"
-                           {% if match.stage == 'group' and match.matchday < current_matchday and not override_active %}disabled{% endif %}>
+                           {% if locked %}disabled{% endif %}>
 
                     <strong style="width:30%; text-align:right;">
                         {{ match.away_team.name }}
                     </strong>
+
+                    {% if locked %}
+                        <span class="text-danger ms-2">🔒 LOCKED</span>
+                    {% endif %}
 
                 </div>
 
