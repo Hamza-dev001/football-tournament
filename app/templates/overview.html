@@ -37,11 +37,11 @@
 
 </div>
 
-<!-- ✅ QUALIFICATION PREVIEW -->
-{% if context.group_complete and not context.r16_exists %}
+<!-- ✅ LIVE QUALIFICATION PREVIEW -->
+{% if not context.r16_exists %}
 
 <div class="card p-4 mt-4 bg-dark text-white">
-    <h4 style="color:#00f2ff;">✅ Qualification Preview (Top 3 + Best 4th)</h4>
+    <h4 style="color:#00f2ff;">📊 Live Qualification Preview (Top 3 + Best 4th)</h4>
 
     <ul class="list-group mt-3">
         {% for item in context.qualified_teams %}
@@ -51,6 +51,7 @@
         </li>
         {% endfor %}
     </ul>
+
 </div>
 
 {% endif %}
