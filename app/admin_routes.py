@@ -23,31 +23,46 @@ def get_current_matchday():
         return 1
 
     diff = now - TOURNAMENT_START
-    days_passed = diff.days
+    matchday = diff.days + 1
 
-    current_matchday = days_passed + 1
+    if matchday > 3:
+        matchday = 3
 
-    if current_matchday > 3:
-        current_matchday = 3
-
-    return current_matchday
+    return matchday
 
 
 # ==========================================================
-# MATCH LOCK CHECK
+# MATCH LOCK CHECK (UPDATED LOGIC)
 # ==========================================================
 
 def is_match_locked(match):
 
+    # ✅ Override bypass
     if session.get("override_deadline"):
         return False
 
+    # ✅ Only apply to group stage
     if match.stage != "group":
         return False
 
     current_matchday = get_current_matchday()
 
-    return match.matchday != current_matchday
+    # ✅ Future matchdays always locked
+    if match.matchday > current_matchday:
+        return True
+
+    # ✅ Previous matchdays:
+    if match.matchday < current_matchday:
+
+        # Lock only if result already entered
+        if match.is_completed:
+            return True
+
+        # Leave unfinished matches editable for admin review
+        return False
+
+    # ✅ Current matchday always editable
+    return False
 
 
 # ==========================================================
