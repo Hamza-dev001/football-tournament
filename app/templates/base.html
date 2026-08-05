@@ -154,24 +154,26 @@
     </div>
 </div>
 
-<!-- ✅ GROUP STATUS -->
+<!-- ✅ GROUP STATUS (UPDATED WITH BRIGHT TEXT) -->
 <div class="container mt-3">
     {% if current_stage == "🟡 Group Stage" %}
         {% if group_stage_complete %}
             <div class="card section-card text-center"
-                 style="border:2px solid #00ff88; box-shadow:0 0 12px #00ff88;">
+                 style="border:2px solid #00ff88; box-shadow:0 0 15px #00ff88;
+                        color:#00ff88; font-weight:bold; font-size:1.2rem;">
                 ✅ Group Stage Completed — Round of 16 Ready
             </div>
         {% else %}
             <div class="card section-card text-center"
-                 style="border:2px solid #ffcc00; box-shadow:0 0 12px #ffcc00;">
+                 style="border:2px solid #ffcc00; box-shadow:0 0 15px #ffcc00;
+                        color:#ffcc00; font-weight:bold; font-size:1.2rem;">
                 ⚠ Group Stage In Progress — {{ remaining_group_matches }} Match(es) Remaining
             </div>
         {% endif %}
     {% endif %}
 </div>
 
-<!-- ✅ UPDATED TOURNAMENT PROGRESS -->
+<!-- ✅ TOURNAMENT PROGRESS -->
 <div class="container mt-3 mb-4">
     <div class="card stage-card text-center p-4">
 
