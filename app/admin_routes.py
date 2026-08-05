@@ -8,7 +8,7 @@ from .routes import stage_exists, stage_complete
 
 admin = Blueprint("admin", __name__)
 
-# ✅ TOURNAMENT START DATE (CHANGE YEAR IF NEEDED)
+# ✅ TOURNAMENT START DATE
 TOURNAMENT_START = datetime(2026, 8, 4, 10, 0, 0)
 
 
@@ -39,7 +39,6 @@ def get_current_matchday():
 
 def is_match_locked(match):
 
-    # Override bypass
     if session.get("override_deadline"):
         return False
 
@@ -48,7 +47,6 @@ def is_match_locked(match):
 
     current_matchday = get_current_matchday()
 
-    # Lock everything except active matchday
     return match.matchday != current_matchday
 
 
@@ -155,7 +153,7 @@ def override_deadline():
 
 
 # ==========================================================
-# ADMIN OVERVIEW (STAGE CONTROL + QUALIFICATION + PAIRING)
+# ADMIN OVERVIEW (LIVE QUALIFICATION + PAIRING)
 # ==========================================================
 
 @admin.route("/overview")
@@ -163,10 +161,13 @@ def override_deadline():
 def overview():
 
     groups = Group.query.all()
-    qualified_teams = []
+
+    pot1 = []
+    pot2 = []
+    pot3 = []
     fourth_placed = []
 
-    # ✅ Build group standings
+    # ✅ Build standings
     for group in groups:
 
         table = []
@@ -214,50 +215,37 @@ def overview():
 
         table.sort(key=lambda x: (x["points"], x["gd"], x["gf"]), reverse=True)
 
-        # ✅ Top 3 qualify
-        qualified_teams.extend(table[:3])
+        pot1.append(table[0])
+        pot2.append(table[1])
+        pot3.append(table[2])
 
         if len(table) > 3:
             fourth_placed.append(table[3])
 
-    # ✅ Best 4th selection
+    # ✅ Best 4th
     fourth_placed.sort(key=lambda x: (x["points"], x["gd"], x["gf"]), reverse=True)
     best_fourth = fourth_placed[0] if fourth_placed else None
 
     if best_fourth:
-        qualified_teams.append(best_fourth)
+        pot3.append(best_fourth)
 
-    # ✅ Build Structured Semi-Random Pairing
+    qualified_teams = pot1 + pot2 + pot3
+
+    # ✅ Safe pairing
     import random
     pairing_preview = []
 
-    pot1 = qualified_teams[:5]
-    pot2 = qualified_teams[5:10]
-    pot3 = qualified_teams[10:15]
+    teams_pool = qualified_teams.copy()
+    random.shuffle(teams_pool)
 
-    available_pot3 = pot3.copy()
+    while len(teams_pool) >= 2:
+        team1 = teams_pool.pop(0)
 
-    for team1 in pot1:
-        possible_opponents = [
-            t for t in available_pot3
-            if t["group"] != team1["group"]
-        ]
-
-        if possible_opponents:
-            opponent = random.choice(possible_opponents)
-            pairing_preview.append((team1, opponent))
-            available_pot3.remove(opponent)
-
-    for team2 in pot2:
-        possible_opponents = [
-            t for t in available_pot3
-            if t["group"] != team2["group"]
-        ]
-
-        if possible_opponents:
-            opponent = random.choice(possible_opponents)
-            pairing_preview.append((team2, opponent))
-            available_pot3.remove(opponent)
+        for i, opponent in enumerate(teams_pool):
+            if opponent["group"] != team1["group"]:
+                pairing_preview.append((team1, opponent))
+                teams_pool.pop(i)
+                break
 
     context = {
         "group_complete": stage_complete("group"),

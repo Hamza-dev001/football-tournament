@@ -14,30 +14,6 @@
         </a>
     {% endif %}
 
-    {% if context.r16_complete and not context.quarter_exists %}
-        <a href="/generate-quarter" class="btn btn-primary mb-2">
-            Generate Quarter Final
-        </a>
-    {% endif %}
-
-    {% if context.quarter_complete and not context.semi_exists %}
-        <a href="/generate-semi" class="btn btn-primary mb-2">
-            Generate Semi Final
-        </a>
-    {% endif %}
-
-    {% if context.semi_complete and not context.final_exists %}
-        <a href="/generate-final" class="btn btn-danger mb-2">
-            Generate Final & Third Place
-        </a>
-    {% endif %}
-
-    {% if context.tournament_finished %}
-        <div class="alert alert-success mt-3">
-            🏆 Tournament Completed!
-        </div>
-    {% endif %}
-
 </div>
 
 {% if not context.r16_exists %}
@@ -47,7 +23,7 @@
      style="border:2px solid #00ff88; box-shadow:0 0 15px #00ff88;">
 
     <h4 style="color:#00ff88; text-shadow:0 0 8px #00ff88;">
-        ✅ Live Qualification Preview (16 Teams)
+        ✅ Live Qualification Preview
     </h4>
 
     <ul class="list-group mt-3">
@@ -64,12 +40,12 @@
 
 </div>
 
-<!-- ✅ R16 PAIRING PREVIEW -->
+<!-- ✅ PAIRING PREVIEW -->
 <div class="card p-4 mt-4"
      style="border:2px solid #ff8800; box-shadow:0 0 15px #ff8800;">
 
     <h4 style="color:#ff8800; text-shadow:0 0 8px #ff8800;">
-        🔀 R16 Pairing Preview (Structured Semi‑Random)
+        🔀 R16 Pairing Preview
     </h4>
 
     <ul class="list-group mt-3">
