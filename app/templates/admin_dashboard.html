@@ -3,22 +3,33 @@
 
 <h2 class="mb-4">⚙ Admin Dashboard</h2>
 
+<!-- ✅ CURRENT MATCHDAY DISPLAY -->
 <div class="alert alert-info">
     📅 Current Matchday: <strong>{{ current_matchday }}</strong>
 </div>
 
+<!-- ✅ TOURNAMENT STAGE CONTROL BUTTON -->
+<div class="mb-3">
+    <a href="{{ url_for('admin.overview') }}" class="btn btn-primary">
+        🏆 Tournament Stage Control
+    </a>
+</div>
+
+<!-- ✅ OVERRIDE STATUS -->
 {% if override_active %}
 <div class="alert alert-warning">
     👑 Deadline Override is ACTIVE
 </div>
 {% endif %}
 
+<!-- ✅ OVERRIDE BUTTON -->
 <form method="POST" action="{{ url_for('admin.override_deadline') }}" class="mb-3">
     <button type="submit" class="btn btn-danger">
-        ⚠ Override Deadline
+        ⚠ Override Deadline (Admin Only)
     </button>
 </form>
 
+<!-- ✅ SCORE UPDATE FORM -->
 <form method="POST" action="{{ url_for('admin.bulk_update') }}">
 
     {% for stage, matches in data.items() %}
