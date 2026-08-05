@@ -49,7 +49,7 @@
 
         .stage-card {
             border: 2px solid #00f2ff;
-            box-shadow: 0 0 25px #00f2ff;
+            box-shadow: 0 0 20px #00f2ff;
             background: linear-gradient(145deg, #111, #1b1b1b);
         }
 
@@ -60,7 +60,12 @@
 
         h2, h4, h5 {
             color: #00f2ff;
-            text-shadow: 0 0 8px #00f2ff;
+            text-shadow: 0 0 6px #00f2ff;
+        }
+
+        .progress-stage {
+            font-weight: bold;
+            font-size: 1.15rem;
         }
 
     </style>
@@ -124,7 +129,6 @@
                     <a class="nav-link rules-link" href="{{ url_for('main.rules') }}">Rules</a>
                 </li>
 
-                <!-- ✅ ADMIN LINKS RESTORED -->
                 {% if current_user.is_authenticated %}
                     <li class="nav-item">
                         <a class="nav-link text-warning" href="{{ url_for('admin.dashboard') }}">Admin</a>
@@ -146,7 +150,7 @@
 <!-- ✅ CURRENT STAGE -->
 <div class="container mt-4">
     <div class="card stage-card text-center p-4">
-        <div style="font-size:1.4rem; font-weight:bold; margin-bottom:5px;">
+        <div style="font-size:1.4rem; font-weight:bold;">
             🚩 CURRENT STAGE
         </div>
         <div style="font-size:2rem; font-weight:bold; color:#ffc107;">
@@ -160,12 +164,12 @@
     {% if current_stage == "🟡 Group Stage" %}
         {% if group_stage_complete %}
             <div class="card section-card text-center"
-                 style="border:2px solid #00ff88; box-shadow:0 0 15px #00ff88;">
+                 style="border:2px solid #00ff88; box-shadow:0 0 12px #00ff88;">
                 ✅ Group Stage Completed — Round of 16 Ready
             </div>
         {% else %}
             <div class="card section-card text-center"
-                 style="border:2px solid #ffcc00; box-shadow:0 0 15px #ffcc00;">
+                 style="border:2px solid #ffcc00; box-shadow:0 0 12px #ffcc00;">
                 ⚠ Group Stage In Progress — {{ remaining_group_matches }} Match(es) Remaining
             </div>
         {% endif %}
@@ -180,29 +184,34 @@
             🏆 TOURNAMENT PROGRESS
         </div>
 
-        <div style="display:flex; justify-content:center; gap:25px; flex-wrap:wrap; font-size:1.2rem; font-weight:bold;">
+        <div style="display:flex; justify-content:center; gap:25px; flex-wrap:wrap;">
 
-            <span style="color:{% if group_done %}#00ff88{% else %}#ffc107{% endif %};">
+            <span class="progress-stage"
+                  style="color:{% if group_done %}#00ff88{% else %}#ffc107{% endif %};">
                 ● Group
             </span>
 
             →
-            <span style="color:{% if r16_done %}#00ff88{% elif r16_exists %}#00f2ff{% else %}#777{% endif %};">
+            <span class="progress-stage"
+                  style="color:{% if r16_done %}#00ff88{% elif r16_exists %}#00f2ff{% else %}#cccccc{% endif %};">
                 ● R16
             </span>
 
             →
-            <span style="color:{% if quarter_done %}#00ff88{% elif quarter_exists %}#bb66ff{% else %}#777{% endif %};">
+            <span class="progress-stage"
+                  style="color:{% if quarter_done %}#00ff88{% elif quarter_exists %}#bb66ff{% else %}#cccccc{% endif %};">
                 ● Quarter
             </span>
 
             →
-            <span style="color:{% if semi_done %}#00ff88{% elif semi_exists %}#ff8800{% else %}#777{% endif %};">
+            <span class="progress-stage"
+                  style="color:{% if semi_done %}#00ff88{% elif semi_exists %}#ff8800{% else %}#cccccc{% endif %};">
                 ● Semi
             </span>
 
             →
-            <span style="color:{% if final_done %}#00ff88{% elif final_exists %}#ff4444{% else %}#777{% endif %};">
+            <span class="progress-stage"
+                  style="color:{% if final_done %}#00ff88{% elif final_exists %}#ff4444{% else %}#cccccc{% endif %};">
                 ● Final
             </span>
 
