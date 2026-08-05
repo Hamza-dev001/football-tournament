@@ -1,15 +1,16 @@
 from flask import Blueprint, render_template, redirect, url_for, request, session
 from flask_login import login_user, login_required, logout_user
-from .models import User, Match
+from .models import User, Match, Group
 from . import db
 from datetime import datetime
+from sqlalchemy import or_
 
 # ✅ Import stage utility functions from routes
 from .routes import stage_exists, stage_complete
 
 admin = Blueprint("admin", __name__)
 
-# ✅ TOURNAMENT START DATE (MAKE SURE YEAR IS CORRECT)
+# ✅ TOURNAMENT START DATE
 TOURNAMENT_START = datetime(2026, 8, 4, 10, 0, 0)
 
 
@@ -40,17 +41,14 @@ def get_current_matchday():
 
 def is_match_locked(match):
 
-    # Override bypass
     if session.get("override_deadline"):
         return False
 
-    # Only group stage locked by matchday
     if match.stage != "group":
         return False
 
     current_matchday = get_current_matchday()
 
-    # Lock everything except active matchday
     return match.matchday != current_matchday
 
 
@@ -130,7 +128,6 @@ def bulk_update():
 
     for match in matches:
 
-        # Skip locked matches
         if is_match_locked(match):
             continue
 
@@ -158,28 +155,81 @@ def override_deadline():
 
 
 # ==========================================================
-# ADMIN OVERVIEW (STAGE CONTROL)
+# ADMIN OVERVIEW (STAGE CONTROL + QUALIFICATION PREVIEW)
 # ==========================================================
 
 @admin.route("/overview")
 @login_required
 def overview():
 
+    groups = Group.query.all()
+    qualified_teams = []
+    fourth_placed = []
+
+    for group in groups:
+
+        table = []
+
+        for team in group.teams:
+
+            points = 0
+            gf = 0
+            ga = 0
+
+            matches = Match.query.filter(
+                Match.stage == "group",
+                or_(
+                    Match.home_team_id == team.id,
+                    Match.away_team_id == team.id
+                )
+            ).all()
+
+            for m in matches:
+                if m.home_score is None:
+                    continue
+
+                if m.home_team_id == team.id:
+                    gf += m.home_score
+                    ga += m.away_score
+                    if m.home_score > m.away_score:
+                        points += 3
+                    elif m.home_score == m.away_score:
+                        points += 1
+                else:
+                    gf += m.away_score
+                    ga += m.home_score
+                    if m.away_score > m.home_score:
+                        points += 3
+                    elif m.away_score == m.home_score:
+                        points += 1
+
+            table.append({
+                "team": team,
+                "points": points,
+                "gd": gf - ga,
+                "gf": gf
+            })
+
+        table.sort(key=lambda x: (x["points"], x["gd"], x["gf"]), reverse=True)
+
+        qualified_teams.extend(table[:3])
+
+        if len(table) > 3:
+            fourth_placed.append(table[3])
+
+    fourth_placed.sort(key=lambda x: (x["points"], x["gd"], x["gf"]), reverse=True)
+
+    best_fourth = fourth_placed[0] if fourth_placed else None
+
+    if best_fourth:
+        qualified_teams.append(best_fourth)
+
     context = {
         "group_exists": stage_exists("group"),
         "group_complete": stage_complete("group"),
-
         "r16_exists": stage_exists("r16"),
-        "r16_complete": stage_complete("r16"),
-
-        "quarter_exists": stage_exists("quarter"),
-        "quarter_complete": stage_complete("quarter"),
-
-        "semi_exists": stage_exists("semi"),
-        "semi_complete": stage_complete("semi"),
-
-        "final_exists": stage_exists("final"),
-        "tournament_finished": stage_complete("final")
+        "qualified_teams": qualified_teams,
+        "best_fourth": best_fourth
     }
 
     return render_template("overview.html", context=context)
