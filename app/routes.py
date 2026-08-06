@@ -24,7 +24,7 @@ def tournament_finished():
     return stage_complete("final")
 
 # ==========================================================
-# GLOBAL STAGE CONTEXT (VISIBLE EVERYWHERE)
+# GLOBAL STAGE CONTEXT
 # ==========================================================
 
 @main.app_context_processor
@@ -47,6 +47,7 @@ def inject_stage_status():
     remaining_group_matches = sum(
         1 for m in group_matches if not m.is_completed
     )
+
     group_stage_complete = stage_complete("group")
 
     group_done = stage_complete("group")
@@ -89,7 +90,7 @@ def rules():
     return render_template("rules.html")
 
 # ==========================================================
-# GROUP FIXTURES (PROGRESSIVE MATCHDAYS)
+# GROUP FIXTURES
 # ==========================================================
 
 @main.route("/group-fixtures")
@@ -128,7 +129,7 @@ def group_fixtures():
     return render_template("group_fixtures.html", data=data)
 
 # ==========================================================
-# STANDINGS (WITH QUALIFICATION STATUS)
+# STANDINGS
 # ==========================================================
 
 @main.route("/standings")
@@ -240,13 +241,73 @@ def match_history():
     )
 
 # ==========================================================
+# TEAM STATISTICS
+# ==========================================================
+
+@main.route("/team-stats")
+def team_stats():
+
+    teams = Team.query.all()
+    stats = []
+
+    for team in teams:
+
+        matches = Match.query.filter(
+            or_(
+                Match.home_team_id == team.id,
+                Match.away_team_id == team.id
+            )
+        ).all()
+
+        wins = goals_scored = goals_conceded = clean_sheets = 0
+
+        for m in matches:
+            if m.home_score is None:
+                continue
+
+            if m.home_team_id == team.id:
+                goals_scored += m.home_score
+                goals_conceded += m.away_score
+                if m.home_score > m.away_score:
+                    wins += 1
+                if m.away_score == 0:
+                    clean_sheets += 1
+            else:
+                goals_scored += m.away_score
+                goals_conceded += m.home_score
+                if m.away_score > m.home_score:
+                    wins += 1
+                if m.home_score == 0:
+                    clean_sheets += 1
+
+        stats.append({
+            "team": team,
+            "wins": wins,
+            "goals_scored": goals_scored,
+            "goals_conceded": goals_conceded,
+            "clean_sheets": clean_sheets
+        })
+
+    most_goals = sorted(stats, key=lambda x: x["goals_scored"], reverse=True)
+    best_defense = sorted(stats, key=lambda x: x["goals_conceded"])
+    most_wins = sorted(stats, key=lambda x: x["wins"], reverse=True)
+    most_clean_sheets = sorted(stats, key=lambda x: x["clean_sheets"], reverse=True)
+
+    return render_template(
+        "team_stats.html",
+        most_goals=most_goals,
+        best_defense=best_defense,
+        most_wins=most_wins,
+        most_clean_sheets=most_clean_sheets
+    )
+
+# ==========================================================
 # SETUP
 # ==========================================================
 
 @main.route("/setup")
 @login_required
 def setup():
-
     if stage_exists("group"):
         return "❌ Tournament already started."
 

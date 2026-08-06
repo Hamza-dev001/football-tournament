@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2 class="text-center mb-4">📊 Team Statistics</h2>
+
+<div class="row">
+
+    <!-- ✅ Most Goals -->
+    <div class="col-md-6 mb-4">
+        <div class="card p-4">
+            <h4 style="color:#00ff88;">🔥 Most Goals Scored</h4>
+            {% for team in most_goals[:5] %}
+                <div>
+                    {{ loop.index }}. {{ team.team.name }} —
+                    <strong style="color:#ffc107;">
+                        {{ team.goals_scored }} Goals
+                    </strong>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- ✅ Best Defense -->
+    <div class="col-md-6 mb-4">
+        <div class="card p-4">
+            <h4 style="color:#bb66ff;">🛡 Best Defense</h4>
+            {% for team in best_defense[:5] %}
+                <div>
+                    {{ loop.index }}. {{ team.team.name }} —
+                    <strong style="color:#ffc107;">
+                        {{ team.goals_conceded }} Conceded
+                    </strong>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- ✅ Most Wins -->
+    <div class="col-md-6 mb-4">
+        <div class="card p-4">
+            <h4 style="color:#00f2ff;">🏆 Most Wins</h4>
+            {% for team in most_wins[:5] %}
+                <div>
+                    {{ loop.index }}. {{ team.team.name }} —
+                    <strong style="color:#ffc107;">
+                        {{ team.wins }} Wins
+                    </strong>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- ✅ Clean Sheets -->
+    <div class="col-md-6 mb-4">
+        <div class="card p-4">
+            <h4 style="color:#ff8800;">🥅 Clean Sheets</h4>
+            {% for team in most_clean_sheets[:5] %}
+                <div>
+                    {{ loop.index }}. {{ team.team.name }} —
+                    <strong style="color:#ffc107;">
+                        {{ team.clean_sheets }} Clean Sheets
+                    </strong>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
