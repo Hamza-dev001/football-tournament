@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2 class="text-center mb-4">📜 Match History</h2>
+
+<div class="card p-4">
+
+    {% if matches %}
+        {% for match in matches %}
+
+        <div class="mb-3 p-3"
+             style="border:1px solid #00f2ff55; border-radius:8px;">
+
+            <strong style="color:#00f2ff;">
+                {{ match.stage|upper }}
+                {% if match.matchday %}
+                    - Matchday {{ match.matchday }}
+                {% endif %}
+            </strong>
+
+            <div style="margin-top:8px; font-size:1.1rem;">
+
+                <span style="color:#ffc107;">
+                    {{ match.home_team.name }}
+                </span>
+
+                <strong>
+                    {{ match.home_score }} - {{ match.away_score }}
+                </strong>
+
+                <span style="color:#ffc107;">
+                    {{ match.away_team.name }}
+                </span>
+
+            </div>
+
+        </div>
+
+        {% endfor %}
+    {% else %}
+        <div class="text-center">
+            No completed matches yet.
+        </div>
+    {% endif %}
+
+</div>
+
+{% endblock %}

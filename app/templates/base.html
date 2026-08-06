@@ -84,6 +84,7 @@
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto">
 
+                <!-- ✅ MAIN NAV LINKS -->
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('main.home') }}">Groups</a>
                 </li>
@@ -94,6 +95,13 @@
 
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('main.standings') }}">Standings</a>
+                </li>
+
+                <!-- ✅ NEW MATCH HISTORY LINK -->
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('main.match_history') }}">
+                        Match History
+                    </a>
                 </li>
 
                 {% if r16_exists %}
@@ -124,6 +132,7 @@
                     <a class="nav-link rules-link" href="{{ url_for('main.rules') }}">Rules</a>
                 </li>
 
+                <!-- ✅ ADMIN LINKS -->
                 {% if current_user.is_authenticated %}
                     <li class="nav-item">
                         <a class="nav-link text-warning" href="{{ url_for('admin.dashboard') }}">Admin</a>
@@ -154,7 +163,7 @@
     </div>
 </div>
 
-<!-- ✅ GROUP STATUS (UPDATED WITH BRIGHT TEXT) -->
+<!-- ✅ GROUP STATUS -->
 <div class="container mt-3">
     {% if current_stage == "🟡 Group Stage" %}
         {% if group_stage_complete %}
