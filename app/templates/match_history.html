@@ -1,7 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h2 class="text-center mb-4">📜 Match History</h2>
+<h2 class="text-center mb-4" style="color:#00f2ff; text-shadow:0 0 8px #00f2ff;">
+    📜 Match History
+</h2>
 
 <div class="card p-4">
 
@@ -9,24 +11,30 @@
         {% for match in matches %}
 
         <div class="mb-3 p-3"
-             style="border:1px solid #00f2ff55; border-radius:8px;">
+             style="border:1px solid #00f2ff55; border-radius:8px;
+                    background:#111; box-shadow:0 0 10px #00f2ff22;">
 
-            <strong style="color:#00f2ff;">
+            <div style="color:#00f2ff; font-weight:bold;">
                 {{ match.stage|upper }}
                 {% if match.matchday %}
-                    - Matchday {{ match.matchday }}
+                    — Matchday {{ match.matchday }}
                 {% endif %}
-            </strong>
+            </div>
 
-            <div style="margin-top:8px; font-size:1.1rem;">
+            <div style="margin-top:8px; font-size:1.3rem; font-weight:bold;">
 
                 <span style="color:#ffc107;">
                     {{ match.home_team.name }}
                 </span>
 
-                <strong>
+                <span style="
+                    color:#00ff88;
+                    margin:0 10px;
+                    font-size:1.4rem;
+                    text-shadow:0 0 10px #00ff88;
+                ">
                     {{ match.home_score }} - {{ match.away_score }}
-                </strong>
+                </span>
 
                 <span style="color:#ffc107;">
                     {{ match.away_team.name }}
