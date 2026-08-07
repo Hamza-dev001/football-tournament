@@ -4,7 +4,7 @@ from flask_login import login_required
 from sqlalchemy import or_
 from .models import Group, Team, Match
 from . import db
-
+from .services.analytics_service import AnalyticsService
 main = Blueprint("main", __name__)
 
 # ==========================================================
