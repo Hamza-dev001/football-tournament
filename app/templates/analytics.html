@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h2 class="mb-4">📊 Advanced Tournament Power Rankings</h2>
+<h2 class="mb-4 text-center">📊 Advanced Tournament Power Rankings</h2>
 
 <div class="card bg-dark text-white p-4">
 
@@ -13,17 +13,21 @@
             {{ loop.index }}. {{ team.team.name }}
         </h4>
 
-        <strong>Performance Score:</strong> {{ team.performance_score }}
+        <!-- ✅ Animated Performance Score -->
+        <strong>Performance Score:</strong>
+        <span class="counter" data-target="{{ team.performance_score }}">
+            0
+        </span>
 
-<div style="background:#222; height:8px; border-radius:5px; margin-top:6px;">
-    <div style="
-        height:8px;
-        border-radius:5px;
-        background:linear-gradient(90deg,#00f2ff,#00ff88);
-        width: {{ (team.performance_score / rankings[0].performance_score) * 100 }}%;
-    ">
-    </div>
-</div>
+        <!-- ✅ Animated Performance Bar -->
+        <div style="background:#222; height:8px; border-radius:5px; margin-top:6px;">
+            <div class="progress-bar-fill"
+                 data-percent="{{ (team.performance_score / rankings[0].performance_score) * 100 }}">
+            </div>
+        </div>
+
+        <br>
+
         <strong>Tier:</strong> {{ team.tier }} <br><br>
 
         <small>
@@ -36,24 +40,74 @@
         <hr>
 
         <small>
-            ⚔ Attack Rating: {{ team.attack_rating }} <br>
-            🛡 Defense Rating: {{ team.defense_rating }} <br>
-            ⚡ Efficiency: {{ team.efficiency }} <br>
+            ⚔ Attack Rating:
+            <span class="counter" data-target="{{ team.attack_rating }}">0</span>
+            <br>
+
+            🛡 Defense Rating:
+            <span class="counter" data-target="{{ team.defense_rating }}">0</span>
+            <br>
+
+            ⚡ Efficiency:
+            <span class="counter" data-target="{{ team.efficiency }}">0</span>
+            <br>
+
             📈 Form (Last 3):
-{% for result in team.form %}
-    {% if result == "W" %}
-        <span style="color:#00ff88;">W</span>
-    {% elif result == "D" %}
-        <span style="color:#ffc107;">D</span>
-    {% else %}
-        <span style="color:#ff4444;">L</span>
-    {% endif %}
-{% endfor %}
+            {% for result in team.form %}
+                {% if result == "W" %}
+                    <span style="color:#00ff88;">W</span>
+                {% elif result == "D" %}
+                    <span style="color:#ffc107;">D</span>
+                {% else %}
+                    <span style="color:#ff4444;">L</span>
+                {% endif %}
+            {% endfor %}
         </small>
 
     </div>
 {% endfor %}
 
 </div>
+
+<!-- ✅ Animation Script -->
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+
+    // Animate counters
+    document.querySelectorAll(".counter").forEach(counter => {
+        let target = parseFloat(counter.getAttribute("data-target"));
+        let count = 0;
+        let increment = target / 40;
+
+        function update() {
+            if (count < target) {
+                count += increment;
+                counter.innerText = count.toFixed(1);
+                requestAnimationFrame(update);
+            } else {
+                counter.innerText = target.toFixed(1);
+            }
+        }
+
+        update();
+    });
+
+    // Animate progress bars
+    document.querySelectorAll(".progress-bar-fill").forEach(bar => {
+        let percent = bar.getAttribute("data-percent");
+
+        bar.style.height = "8px";
+        bar.style.borderRadius = "5px";
+        bar.style.background = "linear-gradient(90deg,#00f2ff,#00ff88)";
+        bar.style.width = "0%";
+
+        setTimeout(() => {
+            bar.style.transition = "width 1.2s ease";
+            bar.style.width = percent + "%";
+        }, 200);
+    });
+
+});
+</script>
 
 {% endblock %}
