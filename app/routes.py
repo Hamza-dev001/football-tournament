@@ -452,21 +452,3 @@ def predict():
         team_a=team_a,
         team_b=team_b
     )
-@admin.route("/reset-r16-and-quarter")
-@login_required
-def reset_r16_and_quarter():
-
-    # ✅ Delete Quarterfinal matches first
-    Match.query.filter_by(stage="quarter").delete()
-
-    # ✅ Reset R16 matches
-    r16_matches = Match.query.filter_by(stage="r16").all()
-
-    for match in r16_matches:
-        match.home_score = None
-        match.away_score = None
-        match.is_completed = False
-
-    db.session.commit()
-
-    return "✅ R16 and Quarterfinal successfully reset."
