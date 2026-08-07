@@ -1,82 +1,108 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h2 class="text-center mb-4">📊 Team Statistics</h2>
+<style>
+.rank-1 { color:#FFD700; text-shadow:0 0 8px #FFD700; font-weight:bold; }
+.rank-2 { color:#C0C0C0; text-shadow:0 0 8px #C0C0C0; font-weight:bold; }
+.rank-3 { color:#CD7F32; text-shadow:0 0 8px #CD7F32; font-weight:bold; }
+.default-rank { color:#00f2ff; text-shadow:0 0 6px #00f2ff; font-weight:bold; }
+
+.stat-row { margin-bottom:14px; }
+.stat-leader { background:rgba(255,215,0,0.08); padding:8px; border-radius:8px; }
+
+.stat-value { color:#ffc107; font-weight:bold; }
+
+.progress-container {
+    height:6px;
+    background:rgba(255,255,255,0.1);
+    border-radius:6px;
+    margin-top:6px;
+    overflow:hidden;
+}
+
+.progress-fill {
+    height:100%;
+    width:0%;
+    background:linear-gradient(90deg,#00f2ff,#00ff88);
+    transition:width 1.2s ease;
+}
+</style>
+
+<h2 class="text-center mb-4" style="color:#00f2ff; text-shadow:0 0 10px #00f2ff;">
+    📊 Team Statistics
+</h2>
 
 <div class="row">
 
-    <!-- ✅ Most Goals -->
+    <!-- MOST GOALS -->
     <div class="col-md-6 mb-4">
         <div class="card p-4">
             <h4 style="color:#00ff88;">🔥 Most Goals Scored</h4>
+
+            {% set max_value = most_goals[0].goals_scored if most_goals else 1 %}
+
             {% for team in most_goals[:5] %}
+            <div class="stat-row {% if loop.index == 1 %}stat-leader{% endif %}">
+                
                 <div>
-                    <span style="color:#00f2ff; font-weight:bold; text-shadow:0 0 6px #00f2ff;">
+                    <span class="
+                        {% if loop.index == 1 %}rank-1
+                        {% elif loop.index == 2 %}rank-2
+                        {% elif loop.index == 3 %}rank-3
+                        {% else %}default-rank{% endif %}
+                    ">
                         {{ loop.index }}. {{ team.team.name }}
                     </span>
-                     —
-                    <strong style="color:#ffc107;">
-                        {{ team.goals_scored }} Goals
-                    </strong>
-                </div>
-            {% endfor %}
-        </div>
-    </div>
 
-    <!-- ✅ Best Defense -->
-    <div class="col-md-6 mb-4">
-        <div class="card p-4">
-            <h4 style="color:#bb66ff;">🛡 Best Defense</h4>
-            {% for team in best_defense[:5] %}
-                <div>
-                    <span style="color:#00f2ff; font-weight:bold; text-shadow:0 0 6px #00f2ff;">
-                        {{ loop.index }}. {{ team.team.name }}
-                    </span>
-                     —
-                    <strong style="color:#ffc107;">
-                        {{ team.goals_conceded }} Conceded
-                    </strong>
+                    <div class="progress-container">
+                        <div class="progress-fill"
+                             data-percent="{{ (team.goals_scored / max_value * 100) | round }}">
+                        </div>
+                    </div>
                 </div>
-            {% endfor %}
-        </div>
-    </div>
 
-    <!-- ✅ Most Wins -->
-    <div class="col-md-6 mb-4">
-        <div class="card p-4">
-            <h4 style="color:#00f2ff;">🏆 Most Wins</h4>
-            {% for team in most_wins[:5] %}
-                <div>
-                    <span style="color:#00f2ff; font-weight:bold; text-shadow:0 0 6px #00f2ff;">
-                        {{ loop.index }}. {{ team.team.name }}
-                    </span>
-                     —
-                    <strong style="color:#ffc107;">
-                        {{ team.wins }} Wins
-                    </strong>
+                <div class="stat-value counter"
+                     data-target="{{ team.goals_scored }}">
+                     0 Goals
                 </div>
-            {% endfor %}
-        </div>
-    </div>
 
-    <!-- ✅ Clean Sheets -->
-    <div class="col-md-6 mb-4">
-        <div class="card p-4">
-            <h4 style="color:#ff8800;">🥅 Clean Sheets</h4>
-            {% for team in most_clean_sheets[:5] %}
-                <div>
-                    <span style="color:#00f2ff; font-weight:bold; text-shadow:0 0 6px #00f2ff;">
-                        {{ loop.index }}. {{ team.team.name }}
-                    </span>
-                     —
-                    <strong style="color:#ffc107;">
-                        {{ team.clean_sheets }} Clean Sheets
-                    </strong>
-                </div>
+            </div>
             {% endfor %}
         </div>
     </div>
 
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+
+    // Animate numbers
+    document.querySelectorAll(".counter").forEach(counter=>{
+        let target = +counter.getAttribute("data-target");
+        let count = 0;
+        let increment = target / 40;
+
+        function update(){
+            if(count < target){
+                count += increment;
+                counter.innerText = Math.ceil(count) + " Goals";
+                requestAnimationFrame(update);
+            } else {
+                counter.innerText = target + " Goals";
+            }
+        }
+        update();
+    });
+
+    // Animate progress bars
+    document.querySelectorAll(".progress-fill").forEach(bar=>{
+        let percent = bar.getAttribute("data-percent");
+        setTimeout(()=>{
+            bar.style.width = percent + "%";
+        },300);
+    });
+
+});
+</script>
 
 {% endblock %}
