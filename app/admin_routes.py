@@ -24,7 +24,7 @@ def get_current_matchday():
     return min(diff.days + 1, 3)
 
 # ==========================================================
-# MATCH LOCK
+# MATCH LOCK SYSTEM
 # ==========================================================
 
 def is_match_locked(match):
@@ -51,6 +51,7 @@ def is_match_locked(match):
 
 @admin.route("/login", methods=["GET", "POST"])
 def login():
+
     if request.method == "POST":
         user = User.query.filter_by(
             username=request.form.get("username")
@@ -63,6 +64,7 @@ def login():
         return "❌ Invalid Credentials"
 
     return render_template("admin_login.html")
+
 
 @admin.route("/logout")
 @login_required
@@ -98,7 +100,7 @@ def dashboard():
     )
 
 # ==========================================================
-# BULK UPDATE
+# BULK SCORE UPDATE
 # ==========================================================
 
 @admin.route("/bulk-update", methods=["POST"])
@@ -134,7 +136,7 @@ def override_deadline():
     return redirect(url_for("admin.dashboard"))
 
 # ==========================================================
-# ADMIN OVERVIEW (LIVE QUALIFICATION + PREVIEW)
+# ADMIN OVERVIEW
 # ==========================================================
 
 @admin.route("/overview")
@@ -204,14 +206,13 @@ def overview():
 def generate_r16():
 
     if stage_exists("r16"):
-        return "❌ R16 already generated."
+        return "❌ Round of 16 already generated."
 
     if not stage_complete("group"):
         return "❌ Complete group stage first."
 
-    qualified = []
-
     groups = Group.query.all()
+    qualified = []
 
     for group in groups:
         table = []
@@ -258,34 +259,38 @@ def generate_r16():
         qualified.extend(table[:3])
 
     random.shuffle(qualified)
-
     pairings = []
 
     while len(qualified) >= 2:
+
         team1 = qualified.pop(0)
 
-        opponent_index = next(
-            (i for i, t in enumerate(qualified) if t["group"] != team1["group"]),
-            None
-        )
+        opponent_index = None
+        for i, candidate in enumerate(qualified):
+            if candidate["group"] != team1["group"]:
+                opponent_index = i
+                break
 
-        if opponent_index is not None:
-            opponent = qualified.pop(opponent_index)
-            pairings.append((team1["team"], opponent["team"]))
+        if opponent_index is None:
+            opponent_index = 0
+
+        opponent = qualified.pop(opponent_index)
+        pairings.append((team1["team"], opponent["team"]))
 
     for team1, team2 in pairings:
         db.session.add(Match(
             home_team_id=team1.id,
             away_team_id=team2.id,
             stage="r16",
-            matchday=1
+            matchday=1,
+            is_completed=False
         ))
 
     db.session.commit()
     return redirect(url_for("admin.dashboard"))
 
 # ==========================================================
-# GENERATE NEXT KNOCKOUT STAGE
+# GENERATE NEXT STAGE
 # ==========================================================
 
 def generate_next_stage(current_stage, next_stage):
@@ -297,10 +302,10 @@ def generate_next_stage(current_stage, next_stage):
         return f"❌ Complete {current_stage} first."
 
     matches = Match.query.filter_by(stage=current_stage).all()
-
     winners = []
 
     for m in matches:
+
         if m.home_score is None:
             return f"❌ Some matches in {current_stage} are incomplete."
 
@@ -317,7 +322,8 @@ def generate_next_stage(current_stage, next_stage):
             home_team_id=winners[i],
             away_team_id=winners[i+1],
             stage=next_stage,
-            matchday=1
+            matchday=1,
+            is_completed=False
         ))
 
     db.session.commit()
