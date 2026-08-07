@@ -36,6 +36,8 @@ class Team(db.Model):
     name = db.Column(db.String(200), nullable=False)
     group_id = db.Column(db.Integer, db.ForeignKey("group.id"), nullable=True)
 
+    
+
 
 # =========================
 # MATCH
