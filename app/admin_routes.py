@@ -190,6 +190,61 @@ def overview():
         table.sort(key=lambda x: (x["points"], x["gd"], x["gf"]), reverse=True)
         qualified.extend(table[:3])
 
+    context = {
+        "qualified_teams": qualified,
+        "group_complete": stage_complete("group"),
+        "r16_exists": stage_exists("r16")
+    }
+
+    return render_template("overview.html", context=context)
+
+    groups = Group.query.all()
+    qualified = []
+
+    for group in groups:
+        table = []
+
+        for team in group.teams:
+            points = gf = ga = 0
+
+            matches = Match.query.filter(
+                Match.stage == "group",
+                or_(
+                    Match.home_team_id == team.id,
+                    Match.away_team_id == team.id
+                )
+            ).all()
+
+            for m in matches:
+                if m.home_score is None:
+                    continue
+
+                if m.home_team_id == team.id:
+                    gf += m.home_score
+                    ga += m.away_score
+                    if m.home_score > m.away_score:
+                        points += 3
+                    elif m.home_score == m.away_score:
+                        points += 1
+                else:
+                    gf += m.away_score
+                    ga += m.home_score
+                    if m.away_score > m.home_score:
+                        points += 3
+                    elif m.away_score == m.home_score:
+                        points += 1
+
+            table.append({
+                "team": team,
+                "group": group.name,
+                "points": points,
+                "gd": gf - ga,
+                "gf": gf
+            })
+
+        table.sort(key=lambda x: (x["points"], x["gd"], x["gf"]), reverse=True)
+        qualified.extend(table[:3])
+
     return render_template(
         "overview.html",
         qualified_teams=qualified,
