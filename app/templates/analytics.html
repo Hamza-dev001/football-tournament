@@ -1,15 +1,31 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h2>📊 Tournament Analytics</h2>
+<h2 class="mb-4">📊 Advanced Tournament Power Rankings</h2>
 
-{% for team in stats %}
-    <div style="margin-bottom:15px;">
-        <strong>{{ team.team.name }}</strong><br>
-        Played: {{ team.played }} |
-        Wins: {{ team.wins }} |
-        Goals: {{ team.goals_scored }}
-    </div>
-{% endfor %}
+<div class="card bg-dark text-white p-4">
+
+    {% for team in rankings %}
+        <div class="mb-3 p-3 border rounded">
+
+            <h4>
+                {% if loop.index == 1 %}👑 {% endif %}
+                {{ loop.index }}. {{ team.team.name }}
+            </h4>
+
+            <strong>Performance Score:</strong> {{ team.performance_score }} <br>
+            <strong>Tier:</strong> {{ team.tier }} <br>
+
+            <small>
+                Points: {{ team.points }} |
+                GD: {{ team.goal_difference }} |
+                Goals: {{ team.goals_scored }} |
+                Clean Sheets: {{ team.clean_sheets }}
+            </small>
+
+        </div>
+    {% endfor %}
+
+</div>
 
 {% endblock %}
