@@ -1,5 +1,5 @@
 import random
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, request
 from flask_login import login_required
 from sqlalchemy import or_
 from .models import Group, Team, Match
