@@ -5,26 +5,35 @@
 
 <div class="card bg-dark text-white p-4">
 
-    {% for team in rankings %}
-        <div class="mb-3 p-3 border rounded">
+{% for team in rankings %}
+    <div class="mb-4 p-3 border rounded">
 
-            <h4>
-                {% if loop.index == 1 %}👑 {% endif %}
-                {{ loop.index }}. {{ team.team.name }}
-            </h4>
+        <h4>
+            {% if loop.index == 1 %}👑 {% endif %}
+            {{ loop.index }}. {{ team.team.name }}
+        </h4>
 
-            <strong>Performance Score:</strong> {{ team.performance_score }} <br>
-            <strong>Tier:</strong> {{ team.tier }} <br>
+        <strong>Performance Score:</strong> {{ team.performance_score }} <br>
+        <strong>Tier:</strong> {{ team.tier }} <br><br>
 
-            <small>
-                Points: {{ team.points }} |
-                GD: {{ team.goal_difference }} |
-                Goals: {{ team.goals_scored }} |
-                Clean Sheets: {{ team.clean_sheets }}
-            </small>
+        <small>
+            Points: {{ team.points }} |
+            GD: {{ team.goal_difference }} |
+            Goals: {{ team.goals_scored }} |
+            Clean Sheets: {{ team.clean_sheets }}
+        </small>
 
-        </div>
-    {% endfor %}
+        <hr>
+
+        <small>
+            ⚔ Attack Rating: {{ team.attack_rating }} <br>
+            🛡 Defense Rating: {{ team.defense_rating }} <br>
+            ⚡ Efficiency: {{ team.efficiency }} <br>
+            📈 Form (Last 3): {{ team.form|join(" ") }}
+        </small>
+
+    </div>
+{% endfor %}
 
 </div>
 
