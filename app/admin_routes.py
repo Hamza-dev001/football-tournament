@@ -136,6 +136,78 @@ def override_deadline():
     return redirect(url_for("admin.dashboard"))
 
 # ==========================================================
+# HELPER: BUILD QUALIFIERS (TOP 3 + BEST 4TH)
+# ==========================================================
+
+def build_group_qualifiers():
+
+    groups = Group.query.all()
+
+    qualified = []
+    fourth_placed = []
+
+    for group in groups:
+        table = []
+
+        for team in group.teams:
+            points = gf = ga = 0
+
+            matches = Match.query.filter(
+                Match.stage == "group",
+                or_(
+                    Match.home_team_id == team.id,
+                    Match.away_team_id == team.id
+                )
+            ).all()
+
+            for m in matches:
+                if m.home_score is None:
+                    continue
+
+                if m.home_team_id == team.id:
+                    gf += m.home_score
+                    ga += m.away_score
+                    if m.home_score > m.away_score:
+                        points += 3
+                    elif m.home_score == m.away_score:
+                        points += 1
+                else:
+                    gf += m.away_score
+                    ga += m.home_score
+                    if m.away_score > m.home_score:
+                        points += 3
+                    elif m.away_score == m.home_score:
+                        points += 1
+
+            table.append({
+                "team": team,
+                "group": group.name,
+                "points": points,
+                "gd": gf - ga,
+                "gf": gf
+            })
+
+        table.sort(key=lambda x: (x["points"], x["gd"], x["gf"]), reverse=True)
+
+        # ✅ Top 3 auto qualify
+        qualified.extend(table[:3])
+
+        # ✅ Save 4th place
+        if len(table) > 3:
+            fourth_placed.append(table[3])
+
+    # ✅ Determine Best 4th
+    if fourth_placed:
+        fourth_placed.sort(
+            key=lambda x: (x["points"], x["gd"], x["gf"]),
+            reverse=True
+        )
+        best_fourth = fourth_placed[0]
+        qualified.append(best_fourth)
+
+    return qualified
+
+# ==========================================================
 # ADMIN OVERVIEW
 # ==========================================================
 
@@ -143,117 +215,27 @@ def override_deadline():
 @login_required
 def overview():
 
-    groups = Group.query.all()
-    qualified = []
-
-    for group in groups:
-        table = []
-
-        for team in group.teams:
-            points = gf = ga = 0
-
-            matches = Match.query.filter(
-                Match.stage == "group",
-                or_(
-                    Match.home_team_id == team.id,
-                    Match.away_team_id == team.id
-                )
-            ).all()
-
-            for m in matches:
-                if m.home_score is None:
-                    continue
-
-                if m.home_team_id == team.id:
-                    gf += m.home_score
-                    ga += m.away_score
-                    if m.home_score > m.away_score:
-                        points += 3
-                    elif m.home_score == m.away_score:
-                        points += 1
-                else:
-                    gf += m.away_score
-                    ga += m.home_score
-                    if m.away_score > m.home_score:
-                        points += 3
-                    elif m.away_score == m.home_score:
-                        points += 1
-
-            table.append({
-                "team": team,
-                "group": group.name,
-                "points": points,
-                "gd": gf - ga,
-                "gf": gf
-            })
-
-        table.sort(key=lambda x: (x["points"], x["gd"], x["gf"]), reverse=True)
-        qualified.extend(table[:3])
-
     context = {
-        "qualified_teams": qualified,
+        "qualified_teams": build_group_qualifiers(),
         "group_complete": stage_complete("group"),
         "r16_exists": stage_exists("r16")
     }
 
     return render_template("overview.html", context=context)
 
-    groups = Group.query.all()
-    qualified = []
+# ==========================================================
+# RESET R16 (TEMP TOOL)
+# ==========================================================
 
-    for group in groups:
-        table = []
-
-        for team in group.teams:
-            points = gf = ga = 0
-
-            matches = Match.query.filter(
-                Match.stage == "group",
-                or_(
-                    Match.home_team_id == team.id,
-                    Match.away_team_id == team.id
-                )
-            ).all()
-
-            for m in matches:
-                if m.home_score is None:
-                    continue
-
-                if m.home_team_id == team.id:
-                    gf += m.home_score
-                    ga += m.away_score
-                    if m.home_score > m.away_score:
-                        points += 3
-                    elif m.home_score == m.away_score:
-                        points += 1
-                else:
-                    gf += m.away_score
-                    ga += m.home_score
-                    if m.away_score > m.home_score:
-                        points += 3
-                    elif m.away_score == m.home_score:
-                        points += 1
-
-            table.append({
-                "team": team,
-                "group": group.name,
-                "points": points,
-                "gd": gf - ga,
-                "gf": gf
-            })
-
-        table.sort(key=lambda x: (x["points"], x["gd"], x["gf"]), reverse=True)
-        qualified.extend(table[:3])
-
-    return render_template(
-        "overview.html",
-        qualified_teams=qualified,
-        group_complete=stage_complete("group"),
-        r16_exists=stage_exists("r16")
-    )
+@admin.route("/reset-r16")
+@login_required
+def reset_r16():
+    Match.query.filter_by(stage="r16").delete()
+    db.session.commit()
+    return "✅ R16 deleted. Now regenerate."
 
 # ==========================================================
-# GENERATE ROUND OF 16
+# GENERATE R16
 # ==========================================================
 
 @admin.route("/generate-r16")
@@ -266,52 +248,7 @@ def generate_r16():
     if not stage_complete("group"):
         return "❌ Complete group stage first."
 
-    groups = Group.query.all()
-    qualified = []
-
-    for group in groups:
-        table = []
-
-        for team in group.teams:
-            points = gf = ga = 0
-
-            matches = Match.query.filter(
-                Match.stage == "group",
-                or_(
-                    Match.home_team_id == team.id,
-                    Match.away_team_id == team.id
-                )
-            ).all()
-
-            for m in matches:
-                if m.home_score is None:
-                    continue
-
-                if m.home_team_id == team.id:
-                    gf += m.home_score
-                    ga += m.away_score
-                    if m.home_score > m.away_score:
-                        points += 3
-                    elif m.home_score == m.away_score:
-                        points += 1
-                else:
-                    gf += m.away_score
-                    ga += m.home_score
-                    if m.away_score > m.home_score:
-                        points += 3
-                    elif m.away_score == m.home_score:
-                        points += 1
-
-            table.append({
-                "team": team,
-                "group": group.name,
-                "points": points,
-                "gd": gf - ga,
-                "gf": gf
-            })
-
-        table.sort(key=lambda x: (x["points"], x["gd"], x["gf"]), reverse=True)
-        qualified.extend(table[:3])
+    qualified = build_group_qualifiers()
 
     random.shuffle(qualified)
     pairings = []
@@ -320,14 +257,10 @@ def generate_r16():
 
         team1 = qualified.pop(0)
 
-        opponent_index = None
-        for i, candidate in enumerate(qualified):
-            if candidate["group"] != team1["group"]:
-                opponent_index = i
-                break
-
-        if opponent_index is None:
-            opponent_index = 0
+        opponent_index = next(
+            (i for i, t in enumerate(qualified) if t["group"] != team1["group"]),
+            0
+        )
 
         opponent = qualified.pop(opponent_index)
         pairings.append((team1["team"], opponent["team"]))
@@ -370,7 +303,7 @@ def generate_next_stage(current_stage, next_stage):
             winners.append(m.away_team_id)
 
     if len(winners) % 2 != 0:
-        return "❌ Cannot generate next stage — uneven winners."
+        return "❌ Uneven winners — cannot generate next stage."
 
     for i in range(0, len(winners), 2):
         db.session.add(Match(
