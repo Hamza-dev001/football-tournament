@@ -11,7 +11,10 @@
             <h4 style="color:#00ff88;">🔥 Most Goals Scored</h4>
             {% for team in most_goals[:5] %}
                 <div>
-                    {{ loop.index }}. {{ team.team.name }} —
+                    <span style="color:#00f2ff; font-weight:bold; text-shadow:0 0 6px #00f2ff;">
+                        {{ loop.index }}. {{ team.team.name }}
+                    </span>
+                     —
                     <strong style="color:#ffc107;">
                         {{ team.goals_scored }} Goals
                     </strong>
@@ -26,7 +29,10 @@
             <h4 style="color:#bb66ff;">🛡 Best Defense</h4>
             {% for team in best_defense[:5] %}
                 <div>
-                    {{ loop.index }}. {{ team.team.name }} —
+                    <span style="color:#00f2ff; font-weight:bold; text-shadow:0 0 6px #00f2ff;">
+                        {{ loop.index }}. {{ team.team.name }}
+                    </span>
+                     —
                     <strong style="color:#ffc107;">
                         {{ team.goals_conceded }} Conceded
                     </strong>
@@ -41,7 +47,10 @@
             <h4 style="color:#00f2ff;">🏆 Most Wins</h4>
             {% for team in most_wins[:5] %}
                 <div>
-                    {{ loop.index }}. {{ team.team.name }} —
+                    <span style="color:#00f2ff; font-weight:bold; text-shadow:0 0 6px #00f2ff;">
+                        {{ loop.index }}. {{ team.team.name }}
+                    </span>
+                     —
                     <strong style="color:#ffc107;">
                         {{ team.wins }} Wins
                     </strong>
@@ -57,9 +66,9 @@
             {% for team in most_clean_sheets[:5] %}
                 <div>
                     <span style="color:#00f2ff; font-weight:bold; text-shadow:0 0 6px #00f2ff;">
-    {{ loop.index }}. {{ team.team.name }}
-</span>
- —
+                        {{ loop.index }}. {{ team.team.name }}
+                    </span>
+                     —
                     <strong style="color:#ffc107;">
                         {{ team.clean_sheets }} Clean Sheets
                     </strong>
