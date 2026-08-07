@@ -2,15 +2,15 @@
 {% block content %}
 
 <style>
-.rank-1 { color:#FFD700; text-shadow:0 0 8px #FFD700; font-weight:bold; }
+.rank-1 { color:#FFD700; text-shadow:0 0 10px #FFD700; font-weight:bold; }
 .rank-2 { color:#C0C0C0; text-shadow:0 0 8px #C0C0C0; font-weight:bold; }
 .rank-3 { color:#CD7F32; text-shadow:0 0 8px #CD7F32; font-weight:bold; }
 .default-rank { color:#00f2ff; text-shadow:0 0 6px #00f2ff; font-weight:bold; }
 
-.stat-row { margin-bottom:14px; }
-.stat-leader { background:rgba(255,215,0,0.08); padding:8px; border-radius:8px; }
+.stat-row { margin-bottom:18px; }
+.stat-leader { background:rgba(255,215,0,0.08); padding:12px; border-radius:10px; }
 
-.stat-value { color:#ffc107; font-weight:bold; }
+.stat-value { color:#ffc107; font-weight:bold; font-size:16px; margin-top:4px; }
 
 .progress-container {
     height:6px;
@@ -34,42 +34,50 @@
 
 <div class="row">
 
-    <!-- MOST GOALS -->
-    <div class="col-md-6 mb-4">
-        <div class="card p-4">
-            <h4 style="color:#00ff88;">🔥 Most Goals Scored</h4>
+{% macro stat_card(title, icon, color, data, value_field, label) %}
+<div class="col-md-6 mb-4">
+    <div class="card p-4">
+        <h4 style="color:{{ color }};">{{ icon }} {{ title }}</h4>
 
-            {% set max_value = most_goals[0].goals_scored if most_goals else 1 %}
+        {% set max_value = data[0][value_field] if data else 1 %}
 
-            {% for team in most_goals[:5] %}
-            <div class="stat-row {% if loop.index == 1 %}stat-leader{% endif %}">
-                
-                <div>
-                    <span class="
-                        {% if loop.index == 1 %}rank-1
-                        {% elif loop.index == 2 %}rank-2
-                        {% elif loop.index == 3 %}rank-3
-                        {% else %}default-rank{% endif %}
-                    ">
-                        {{ loop.index }}. {{ team.team.name }}
-                    </span>
+        {% for team in data[:5] %}
+        <div class="stat-row {% if loop.index == 1 %}stat-leader{% endif %}">
 
-                    <div class="progress-container">
-                        <div class="progress-fill"
-                             data-percent="{{ (team.goals_scored / max_value * 100) | round }}">
-                        </div>
+            <div>
+                <span class="
+                    {% if loop.index == 1 %}rank-1
+                    {% elif loop.index == 2 %}rank-2
+                    {% elif loop.index == 3 %}rank-3
+                    {% else %}default-rank{% endif %}
+                ">
+                    {% if loop.index == 1 %}👑 {% endif %}
+                    {{ loop.index }}. {{ team.team.name }}
+                </span>
+
+                <div class="progress-container">
+                    <div class="progress-fill"
+                         data-percent="{{ (team[value_field] / max_value * 100) | round }}">
                     </div>
                 </div>
 
                 <div class="stat-value counter"
-                     data-target="{{ team.goals_scored }}">
-                     0 Goals
+                     data-target="{{ team[value_field] }}"
+                     data-label="{{ label }}">
+                     0 {{ label }}
                 </div>
-
             </div>
-            {% endfor %}
+
         </div>
+        {% endfor %}
     </div>
+</div>
+{% endmacro %}
+
+{{ stat_card("Most Goals Scored", "🔥", "#00ff88", most_goals, "goals_scored", "Goals") }}
+{{ stat_card("Best Defense", "🛡", "#bb66ff", best_defense, "goals_conceded", "Conceded") }}
+{{ stat_card("Most Wins", "🏆", "#00f2ff", most_wins, "wins", "Wins") }}
+{{ stat_card("Clean Sheets", "🥅", "#ff8800", most_clean_sheets, "clean_sheets", "Clean Sheets") }}
 
 </div>
 
@@ -79,16 +87,17 @@ document.addEventListener("DOMContentLoaded", function(){
     // Animate numbers
     document.querySelectorAll(".counter").forEach(counter=>{
         let target = +counter.getAttribute("data-target");
+        let label = counter.getAttribute("data-label");
         let count = 0;
         let increment = target / 40;
 
         function update(){
             if(count < target){
                 count += increment;
-                counter.innerText = Math.ceil(count) + " Goals";
+                counter.innerText = Math.ceil(count) + " " + label;
                 requestAnimationFrame(update);
             } else {
-                counter.innerText = target + " Goals";
+                counter.innerText = target + " " + label;
             }
         }
         update();
