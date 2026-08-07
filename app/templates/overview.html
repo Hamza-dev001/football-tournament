@@ -17,7 +17,7 @@
 <!-- ✅ GENERATE R16 -->
 {% if context.group_complete and not context.r16_exists %}
     <div class="mb-3">
-        <a href="{{ url_for('admin.generate_r16') }}" class="btn btn-primary">
+        <a href="/admin/generate-r16" class="btn btn-primary">
             🔵 Generate Round of 16
         </a>
     </div>
@@ -26,7 +26,7 @@
 <!-- ✅ GENERATE QUARTER -->
 {% if context.r16_exists and not quarter_exists %}
     <div class="mb-3">
-        <a href="{{ url_for('admin.generate_quarter') }}" class="btn btn-secondary">
+        <a href="/admin/generate-quarter" class="btn btn-secondary">
             🟣 Generate Quarterfinal
         </a>
     </div>
@@ -35,7 +35,7 @@
 <!-- ✅ GENERATE SEMI -->
 {% if quarter_exists and not semi_exists %}
     <div class="mb-3">
-        <a href="{{ url_for('admin.generate_semi') }}" class="btn btn-warning">
+        <a href="/admin/generate-semi" class="btn btn-warning">
             🟠 Generate Semifinal
         </a>
     </div>
@@ -44,7 +44,7 @@
 <!-- ✅ GENERATE FINAL -->
 {% if semi_exists and not final_exists %}
     <div class="mb-3">
-        <a href="{{ url_for('admin.generate_final') }}" class="btn btn-danger">
+        <a href="/admin/generate-final" class="btn btn-danger">
             🔴 Generate Final
         </a>
     </div>
@@ -53,13 +53,12 @@
 <!-- ✅ GENERATE THIRD PLACE -->
 {% if semi_exists and not third_exists %}
     <div class="mb-3">
-        <a href="{{ url_for('admin.generate_third') }}" class="btn btn-info">
+        <a href="/admin/generate-third" class="btn btn-info">
             🥉 Generate Third Place
         </a>
     </div>
 {% endif %}
 
-<!-- ✅ QUALIFIED TEAMS PREVIEW -->
 <hr>
 
 <h4>✅ Qualified Teams (Top 3 Per Group)</h4>
