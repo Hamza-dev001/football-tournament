@@ -21,8 +21,7 @@ def get_current_matchday():
     if now < TOURNAMENT_START:
         return 1
     diff = now - TOURNAMENT_START
-    matchday = diff.days + 1
-    return min(matchday, 3)
+    return min(diff.days + 1, 3)
 
 # ==========================================================
 # MATCH LOCK
@@ -135,10 +134,12 @@ def override_deadline():
     return redirect(url_for("admin.dashboard"))
 
 # ==========================================================
-# HELPER: GET GROUP QUALIFIERS
+# ADMIN OVERVIEW (LIVE QUALIFICATION + PREVIEW)
 # ==========================================================
 
-def get_group_qualifiers():
+@admin.route("/overview")
+@login_required
+def overview():
 
     groups = Group.query.all()
     qualified = []
@@ -185,10 +186,14 @@ def get_group_qualifiers():
             })
 
         table.sort(key=lambda x: (x["points"], x["gd"], x["gf"]), reverse=True)
-
         qualified.extend(table[:3])
 
-    return qualified
+    return render_template(
+        "overview.html",
+        qualified_teams=qualified,
+        group_complete=stage_complete("group"),
+        r16_exists=stage_exists("r16")
+    )
 
 # ==========================================================
 # GENERATE ROUND OF 16
@@ -204,21 +209,77 @@ def generate_r16():
     if not stage_complete("group"):
         return "❌ Complete group stage first."
 
-    qualified = get_group_qualifiers()
+    qualified = []
+
+    groups = Group.query.all()
+
+    for group in groups:
+        table = []
+
+        for team in group.teams:
+            points = gf = ga = 0
+
+            matches = Match.query.filter(
+                Match.stage == "group",
+                or_(
+                    Match.home_team_id == team.id,
+                    Match.away_team_id == team.id
+                )
+            ).all()
+
+            for m in matches:
+                if m.home_score is None:
+                    continue
+
+                if m.home_team_id == team.id:
+                    gf += m.home_score
+                    ga += m.away_score
+                    if m.home_score > m.away_score:
+                        points += 3
+                    elif m.home_score == m.away_score:
+                        points += 1
+                else:
+                    gf += m.away_score
+                    ga += m.home_score
+                    if m.away_score > m.home_score:
+                        points += 3
+                    elif m.away_score == m.home_score:
+                        points += 1
+
+            table.append({
+                "team": team,
+                "group": group.name,
+                "points": points,
+                "gd": gf - ga,
+                "gf": gf
+            })
+
+        table.sort(key=lambda x: (x["points"], x["gd"], x["gf"]), reverse=True)
+        qualified.extend(table[:3])
+
     random.shuffle(qualified)
+
+    pairings = []
 
     while len(qualified) >= 2:
         team1 = qualified.pop(0)
-        for i, opponent in enumerate(qualified):
-            if opponent["group"] != team1["group"]:
-                db.session.add(Match(
-                    home_team_id=team1["team"].id,
-                    away_team_id=opponent["team"].id,
-                    stage="r16",
-                    matchday=1
-                ))
-                qualified.pop(i)
-                break
+
+        opponent_index = next(
+            (i for i, t in enumerate(qualified) if t["group"] != team1["group"]),
+            None
+        )
+
+        if opponent_index is not None:
+            opponent = qualified.pop(opponent_index)
+            pairings.append((team1["team"], opponent["team"]))
+
+    for team1, team2 in pairings:
+        db.session.add(Match(
+            home_team_id=team1.id,
+            away_team_id=team2.id,
+            stage="r16",
+            matchday=1
+        ))
 
     db.session.commit()
     return redirect(url_for("admin.dashboard"))
@@ -240,10 +301,16 @@ def generate_next_stage(current_stage, next_stage):
     winners = []
 
     for m in matches:
+        if m.home_score is None:
+            return f"❌ Some matches in {current_stage} are incomplete."
+
         if m.home_score > m.away_score:
             winners.append(m.home_team_id)
         else:
             winners.append(m.away_team_id)
+
+    if len(winners) % 2 != 0:
+        return "❌ Cannot generate next stage — uneven winners."
 
     for i in range(0, len(winners), 2):
         db.session.add(Match(
