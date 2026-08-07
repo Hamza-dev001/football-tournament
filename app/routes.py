@@ -6,7 +6,7 @@ from .models import Group, Team, Match
 from . import db
 from .services.analytics_service import AnalyticsService
 main = Blueprint("main", __name__)
-
+from .models import Team
 # ==========================================================
 # STAGE UTILITIES
 # ==========================================================
@@ -428,3 +428,27 @@ def bracket():
 def analytics():
     rankings = AnalyticsService.get_power_rankings()
     return render_template("analytics.html", rankings=rankings)
+@main.route("/predict", methods=["GET", "POST"])
+def predict():
+
+    teams = Team.query.all()
+    prediction = None
+    team_a = team_b = None
+
+    if request.method == "POST":
+        team_a_id = request.form.get("team_a")
+        team_b_id = request.form.get("team_b")
+
+        if team_a_id and team_b_id and team_a_id != team_b_id:
+            team_a = Team.query.get(int(team_a_id))
+            team_b = Team.query.get(int(team_b_id))
+
+            prediction = AnalyticsService.predict_match(team_a, team_b)
+
+    return render_template(
+        "predict.html",
+        teams=teams,
+        prediction=prediction,
+        team_a=team_a,
+        team_b=team_b
+    )

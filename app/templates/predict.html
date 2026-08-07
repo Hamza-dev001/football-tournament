@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>🤖 AI Match Prediction</h2>
+
+<form method="POST" class="mb-4">
+
+    <select name="team_a" class="form-select mb-2" required>
+        <option value="">Select Team A</option>
+        {% for team in teams %}
+            <option value="{{ team.id }}">{{ team.name }}</option>
+        {% endfor %}
+    </select>
+
+    <select name="team_b" class="form-select mb-2" required>
+        <option value="">Select Team B</option>
+        {% for team in teams %}
+            <option value="{{ team.id }}">{{ team.name }}</option>
+        {% endfor %}
+    </select>
+
+    <button type="submit" class="btn btn-primary">
+        Predict
+    </button>
+
+</form>
+
+{% if prediction %}
+
+<div class="card p-4 bg-dark text-white">
+
+    <h4>{{ team_a.name }} vs {{ team_b.name }}</h4>
+
+    <p>
+        🔵 {{ team_a.name }} Win Probability: <strong>{{ prediction.team_a_prob }}%</strong><br>
+        🔴 {{ team_b.name }} Win Probability: <strong>{{ prediction.team_b_prob }}%</strong>
+    </p>
+
+    <div style="background:#222; height:10px; border-radius:5px;">
+        <div style="
+            height:10px;
+            background:#00f2ff;
+            width: {{ prediction.team_a_prob }}%;
+        ">
+        </div>
+    </div>
+
+</div>
+
+{% endif %}
+
+{% endblock %}

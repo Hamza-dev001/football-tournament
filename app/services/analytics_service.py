@@ -177,3 +177,31 @@ class AnalyticsService:
         rankings.sort(key=lambda x: x["performance_score"], reverse=True)
 
         return rankings
+        # --------------------------------------------------
+    # AI MATCH PREDICTION
+    # --------------------------------------------------
+
+    @staticmethod
+    def predict_match(team_a, team_b):
+
+        stats_a = AnalyticsService.calculate_team_stats(team_a)
+        stats_b = AnalyticsService.calculate_team_stats(team_b)
+
+        score_a = AnalyticsService.calculate_performance_score(stats_a)
+        score_b = AnalyticsService.calculate_performance_score(stats_b)
+
+        total = score_a + score_b
+
+        if total == 0:
+            return {
+                "team_a_prob": 50,
+                "team_b_prob": 50
+            }
+
+        prob_a = round((score_a / total) * 100, 2)
+        prob_b = round((score_b / total) * 100, 2)
+
+        return {
+            "team_a_prob": prob_a,
+            "team_b_prob": prob_b
+        }
