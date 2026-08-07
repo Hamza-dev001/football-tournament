@@ -13,7 +13,17 @@
             {{ loop.index }}. {{ team.team.name }}
         </h4>
 
-        <strong>Performance Score:</strong> {{ team.performance_score }} <br>
+        <strong>Performance Score:</strong> {{ team.performance_score }}
+
+<div style="background:#222; height:8px; border-radius:5px; margin-top:6px;">
+    <div style="
+        height:8px;
+        border-radius:5px;
+        background:linear-gradient(90deg,#00f2ff,#00ff88);
+        width: {{ (team.performance_score / rankings[0].performance_score) * 100 }}%;
+    ">
+    </div>
+</div>
         <strong>Tier:</strong> {{ team.tier }} <br><br>
 
         <small>
@@ -29,7 +39,16 @@
             ⚔ Attack Rating: {{ team.attack_rating }} <br>
             🛡 Defense Rating: {{ team.defense_rating }} <br>
             ⚡ Efficiency: {{ team.efficiency }} <br>
-            📈 Form (Last 3): {{ team.form|join(" ") }}
+            📈 Form (Last 3):
+{% for result in team.form %}
+    {% if result == "W" %}
+        <span style="color:#00ff88;">W</span>
+    {% elif result == "D" %}
+        <span style="color:#ffc107;">D</span>
+    {% else %}
+        <span style="color:#ff4444;">L</span>
+    {% endif %}
+{% endfor %}
         </small>
 
     </div>
