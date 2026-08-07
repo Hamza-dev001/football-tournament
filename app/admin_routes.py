@@ -142,7 +142,6 @@ def override_deadline():
 def build_group_qualifiers():
 
     groups = Group.query.all()
-
     qualified = []
     fourth_placed = []
 
@@ -189,21 +188,17 @@ def build_group_qualifiers():
 
         table.sort(key=lambda x: (x["points"], x["gd"], x["gf"]), reverse=True)
 
-        # ✅ Top 3 auto qualify
         qualified.extend(table[:3])
 
-        # ✅ Save 4th place
         if len(table) > 3:
             fourth_placed.append(table[3])
 
-    # ✅ Determine Best 4th
     if fourth_placed:
         fourth_placed.sort(
             key=lambda x: (x["points"], x["gd"], x["gf"]),
             reverse=True
         )
-        best_fourth = fourth_placed[0]
-        qualified.append(best_fourth)
+        qualified.append(fourth_placed[0])
 
     return qualified
 
@@ -224,17 +219,6 @@ def overview():
     return render_template("overview.html", context=context)
 
 # ==========================================================
-# RESET R16 (TEMP TOOL)
-# ==========================================================
-
-@admin.route("/reset-r16")
-@login_required
-def reset_r16():
-    Match.query.filter_by(stage="r16").delete()
-    db.session.commit()
-    return "✅ R16 deleted. Now regenerate."
-
-# ==========================================================
 # GENERATE R16
 # ==========================================================
 
@@ -249,12 +233,11 @@ def generate_r16():
         return "❌ Complete group stage first."
 
     qualified = build_group_qualifiers()
-
     random.shuffle(qualified)
+
     pairings = []
 
     while len(qualified) >= 2:
-
         team1 = qualified.pop(0)
 
         opponent_index = next(
@@ -293,7 +276,6 @@ def generate_next_stage(current_stage, next_stage):
     winners = []
 
     for m in matches:
-
         if m.home_score is None:
             return f"❌ Some matches in {current_stage} are incomplete."
 
