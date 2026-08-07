@@ -424,3 +424,15 @@ def final():
 @main.route("/bracket")
 def bracket():
     return render_template("bracket.html")
+@main.route("/analytics")
+def analytics():
+
+    teams = Team.query.all()
+    stats = []
+
+    for team in teams:
+        stats.append(
+            AnalyticsService.calculate_team_stats(team)
+        )
+
+    return render_template("analytics.html", stats=stats)

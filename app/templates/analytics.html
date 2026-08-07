@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>📊 Tournament Analytics</h2>
+
+{% for team in stats %}
+    <div style="margin-bottom:15px;">
+        <strong>{{ team.team.name }}</strong><br>
+        Played: {{ team.played }} |
+        Wins: {{ team.wins }} |
+        Goals: {{ team.goals_scored }}
+    </div>
+{% endfor %}
+
+{% endblock %}
