@@ -2,20 +2,37 @@ import random
 from flask import Blueprint, render_template, request
 from flask_login import login_required
 from sqlalchemy import or_
-from .models import Group, Team, Match
+
+from .models import (
+    Group, Team, Match, Season, Player, SeasonAssignment,
+    get_active_season
+)
 from . import db
 from .services.analytics_service import AnalyticsService
+from .services.season_setup import (
+    distribute_ids_into_groups, generate_round_robin, MIN_TEAMS_PER_SEASON
+)
+
 main = Blueprint("main", __name__)
-from .models import Team
+
+
 # ==========================================================
-# STAGE UTILITIES
+# STAGE UTILITIES (season-scoped)
 # ==========================================================
 
-def stage_exists(stage_name):
-    return Match.query.filter_by(stage=stage_name).count() > 0
+def stage_exists(stage_name, season_id=None):
+    season = get_active_season()
+    season_id = season_id or (season.id if season else None)
+    if not season_id:
+        return False
+    return Match.query.filter_by(stage=stage_name, season_id=season_id).count() > 0
 
-def stage_complete(stage_name):
-    matches = Match.query.filter_by(stage=stage_name).all()
+def stage_complete(stage_name, season_id=None):
+    season = get_active_season()
+    season_id = season_id or (season.id if season else None)
+    if not season_id:
+        return False
+    matches = Match.query.filter_by(stage=stage_name, season_id=season_id).all()
     if not matches:
         return False
     return all(m.is_completed for m in matches)
@@ -23,12 +40,24 @@ def stage_complete(stage_name):
 def tournament_finished():
     return stage_complete("final")
 
+
 # ==========================================================
 # GLOBAL STAGE CONTEXT
 # ==========================================================
 
 @main.app_context_processor
 def inject_stage_status():
+    season = get_active_season()
+
+    if not season:
+        return {
+            "r16_exists": False, "quarter_exists": False, "semi_exists": False,
+            "third_exists": False, "final_exists": False,
+            "current_stage": "⚪ No Active Season", "remaining_group_matches": 0,
+            "group_stage_complete": False, "group_done": False, "r16_done": False,
+            "quarter_done": False, "semi_done": False, "final_done": False,
+            "active_season": None
+        }
 
     if stage_exists("final") and stage_complete("final"):
         current_stage = "🏆 Tournament Completed"
@@ -43,18 +72,8 @@ def inject_stage_status():
     else:
         current_stage = "🟡 Group Stage"
 
-    group_matches = Match.query.filter_by(stage="group").all()
-    remaining_group_matches = sum(
-        1 for m in group_matches if not m.is_completed
-    )
-
-    group_stage_complete = stage_complete("group")
-
-    group_done = stage_complete("group")
-    r16_done = stage_complete("r16")
-    quarter_done = stage_complete("quarter")
-    semi_done = stage_complete("semi")
-    final_done = stage_complete("final")
+    group_matches = Match.query.filter_by(stage="group", season_id=season.id).all()
+    remaining_group_matches = sum(1 for m in group_matches if not m.is_completed)
 
     return {
         "r16_exists": stage_exists("r16"),
@@ -64,13 +83,15 @@ def inject_stage_status():
         "final_exists": stage_exists("final"),
         "current_stage": current_stage,
         "remaining_group_matches": remaining_group_matches,
-        "group_stage_complete": group_stage_complete,
-        "group_done": group_done,
-        "r16_done": r16_done,
-        "quarter_done": quarter_done,
-        "semi_done": semi_done,
-        "final_done": final_done
+        "group_stage_complete": stage_complete("group"),
+        "group_done": stage_complete("group"),
+        "r16_done": stage_complete("r16"),
+        "quarter_done": stage_complete("quarter"),
+        "semi_done": stage_complete("semi"),
+        "final_done": stage_complete("final"),
+        "active_season": season
     }
+
 
 # ==========================================================
 # HOME
@@ -78,16 +99,15 @@ def inject_stage_status():
 
 @main.route("/")
 def home():
-    groups = Group.query.all()
-    return render_template("home.html", groups=groups)
+    season = get_active_season()
+    groups = Group.query.filter_by(season_id=season.id).all() if season else []
+    return render_template("home.html", groups=groups, season=season)
 
-# ==========================================================
-# RULES
-# ==========================================================
 
 @main.route("/rules")
 def rules():
     return render_template("rules.html")
+
 
 # ==========================================================
 # GROUP FIXTURES
@@ -95,131 +115,115 @@ def rules():
 
 @main.route("/group-fixtures")
 def group_fixtures():
+    season = get_active_season()
+    if not season:
+        return render_template("group_fixtures.html", data=[])
 
-    groups = Group.query.all()
+    groups = Group.query.filter_by(season_id=season.id).all()
     data = []
 
     for group in groups:
         matches = (
             Match.query
-            .filter_by(stage="group", group_id=group.id)
+            .filter_by(stage="group", group_id=group.id, season_id=season.id)
             .order_by(Match.matchday, Match.id)
             .all()
         )
-
         matchdays = {}
-
         for match in matches:
             matchdays.setdefault(match.matchday, []).append(match)
 
         visible_matchdays = {}
-
         for matchday in sorted(matchdays.keys()):
             matches_in_day = matchdays[matchday]
             visible_matchdays[matchday] = matches_in_day
-
             if not all(m.is_completed for m in matches_in_day):
                 break
 
-        data.append({
-            "group": group,
-            "matchdays": visible_matchdays
-        })
+        data.append({"group": group, "matchdays": visible_matchdays})
 
-    return render_template("group_fixtures.html", data=data)
+    return render_template("group_fixtures.html", data=data, season=season)
+
 
 # ==========================================================
 # STANDINGS
 # ==========================================================
 
+def _build_group_table(group, season_id):
+    table = []
+    for assignment in group.assignments:
+        played = wins = draws = losses = points = 0
+        gf = ga = 0
+
+        matches = Match.query.filter(
+            Match.stage == "group",
+            Match.season_id == season_id,
+            or_(
+                Match.home_assignment_id == assignment.id,
+                Match.away_assignment_id == assignment.id
+            )
+        ).all()
+
+        for m in matches:
+            if m.home_score is None:
+                continue
+            played += 1
+            if m.home_assignment_id == assignment.id:
+                gf += m.home_score; ga += m.away_score
+                if m.home_score > m.away_score: wins += 1; points += 3
+                elif m.home_score == m.away_score: draws += 1; points += 1
+                else: losses += 1
+            else:
+                gf += m.away_score; ga += m.home_score
+                if m.away_score > m.home_score: wins += 1; points += 3
+                elif m.away_score == m.home_score: draws += 1; points += 1
+                else: losses += 1
+
+        table.append({
+            "assignment": assignment, "played": played, "wins": wins,
+            "draws": draws, "losses": losses, "gf": gf, "ga": ga,
+            "gd": gf - ga, "points": points
+        })
+
+    table.sort(key=lambda x: (x["points"], x["gd"], x["gf"]), reverse=True)
+    return table
+
+
 @main.route("/standings")
 def standings():
+    season = get_active_season()
+    if not season:
+        return render_template("group_standings.html", standings_data=[])
 
-    groups = Group.query.all()
+    groups = Group.query.filter_by(season_id=season.id).all()
     standings_data = []
 
     for group in groups:
-        table = []
+        table = _build_group_table(group, season.id)
+        qualifiers_n = season.qualifiers_per_group or 3
 
-        for team in group.teams:
-
-            played = wins = draws = losses = points = 0
-            gf = ga = 0
-
-            matches = Match.query.filter(
-                Match.stage == "group",
-                or_(
-                    Match.home_team_id == team.id,
-                    Match.away_team_id == team.id
-                )
-            ).all()
-
-            for m in matches:
-                if m.home_score is None:
-                    continue
-
-                played += 1
-
-                if m.home_team_id == team.id:
-                    gf += m.home_score
-                    ga += m.away_score
-                    if m.home_score > m.away_score:
-                        wins += 1; points += 3
-                    elif m.home_score == m.away_score:
-                        draws += 1; points += 1
-                    else:
-                        losses += 1
-                else:
-                    gf += m.away_score
-                    ga += m.home_score
-                    if m.away_score > m.home_score:
-                        wins += 1; points += 3
-                    elif m.away_score == m.home_score:
-                        draws += 1; points += 1
-                    else:
-                        losses += 1
-
-            table.append({
-                "team": team,
-                "played": played,
-                "wins": wins,
-                "draws": draws,
-                "losses": losses,
-                "gf": gf,
-                "ga": ga,
-                "gd": gf - ga,
-                "points": points
-            })
-
-        table.sort(key=lambda x: (x["points"], x["gd"], x["gf"]), reverse=True)
-
-        for index, team_data in enumerate(table):
-            if index < 3:
-                team_data["status"] = "qualified"
-            elif index == 3:
-                team_data["status"] = "fourth"
+        for index, row in enumerate(table):
+            if index < qualifiers_n:
+                row["status"] = "qualified"
+            elif index == qualifiers_n:
+                row["status"] = "fourth"
             else:
-                team_data["status"] = "eliminated"
+                row["status"] = "eliminated"
 
-        standings_data.append({
-            "group": group,
-            "table": table
-        })
+        standings_data.append({"group": group, "table": table})
 
-    all_teams = []
-    for group in standings_data:
-        for team in group["table"]:
-            all_teams.append(team)
-
-    top_scoring_team = max(all_teams, key=lambda x: x["gf"]) if all_teams else None
-    best_defense_team = min(all_teams, key=lambda x: x["ga"]) if all_teams else None
+    all_rows = [row for g in standings_data for row in g["table"]]
+    top_scoring_team = max(all_rows, key=lambda x: x["gf"]) if all_rows else None
+    best_defense_team = min(all_rows, key=lambda x: x["ga"]) if all_rows else None
 
     return render_template(
         "group_standings.html",
         standings_data=standings_data,
         top_scoring_team=top_scoring_team,
-        best_defense_team=best_defense_team
+        best_defense_team=best_defense_team,
+        season=season
     )
+
 
 # ==========================================================
 # MATCH HISTORY
@@ -227,125 +231,147 @@ def standings():
 
 @main.route("/match-history")
 def match_history():
+    season = get_active_season()
+    if not season:
+        return render_template("match_history.html", matches=[])
 
     completed_matches = (
         Match.query
-        .filter(Match.home_score != None)
+        .filter(Match.home_score.isnot(None), Match.season_id == season.id)
         .order_by(Match.stage, Match.matchday, Match.id)
         .all()
     )
+    return render_template("match_history.html", matches=completed_matches, season=season)
 
-    return render_template(
-        "match_history.html",
-        matches=completed_matches
-    )
 
 # ==========================================================
-# TEAM STATISTICS
+# TEAM (CLUB) STATS — this season's club performance
 # ==========================================================
 
 @main.route("/team-stats")
 def team_stats():
+    season = get_active_season()
+    if not season:
+        return render_template("team_stats.html", most_goals=[], best_defense=[],
+                                most_wins=[], most_clean_sheets=[])
 
-    teams = Team.query.all()
+    assignments = SeasonAssignment.query.filter_by(season_id=season.id).all()
     stats = []
 
-    for team in teams:
-
+    for assignment in assignments:
         matches = Match.query.filter(
+            Match.season_id == season.id,
             or_(
-                Match.home_team_id == team.id,
-                Match.away_team_id == team.id
+                Match.home_assignment_id == assignment.id,
+                Match.away_assignment_id == assignment.id
             )
         ).all()
 
         wins = goals_scored = goals_conceded = clean_sheets = 0
-
         for m in matches:
             if m.home_score is None:
                 continue
-
-            if m.home_team_id == team.id:
-                goals_scored += m.home_score
-                goals_conceded += m.away_score
-                if m.home_score > m.away_score:
-                    wins += 1
-                if m.away_score == 0:
-                    clean_sheets += 1
+            if m.home_assignment_id == assignment.id:
+                goals_scored += m.home_score; goals_conceded += m.away_score
+                if m.home_score > m.away_score: wins += 1
+                if m.away_score == 0: clean_sheets += 1
             else:
-                goals_scored += m.away_score
-                goals_conceded += m.home_score
-                if m.away_score > m.home_score:
-                    wins += 1
-                if m.home_score == 0:
-                    clean_sheets += 1
+                goals_scored += m.away_score; goals_conceded += m.home_score
+                if m.away_score > m.home_score: wins += 1
+                if m.home_score == 0: clean_sheets += 1
 
         stats.append({
-            "team": team,
-            "wins": wins,
-            "goals_scored": goals_scored,
-            "goals_conceded": goals_conceded,
+            "assignment": assignment, "wins": wins,
+            "goals_scored": goals_scored, "goals_conceded": goals_conceded,
             "clean_sheets": clean_sheets
         })
 
-    most_goals = sorted(stats, key=lambda x: x["goals_scored"], reverse=True)
-    best_defense = sorted(stats, key=lambda x: x["goals_conceded"])
-    most_wins = sorted(stats, key=lambda x: x["wins"], reverse=True)
-    most_clean_sheets = sorted(stats, key=lambda x: x["clean_sheets"], reverse=True)
-
     return render_template(
         "team_stats.html",
-        most_goals=most_goals,
-        best_defense=best_defense,
-        most_wins=most_wins,
-        most_clean_sheets=most_clean_sheets
+        most_goals=sorted(stats, key=lambda x: x["goals_scored"], reverse=True),
+        best_defense=sorted(stats, key=lambda x: x["goals_conceded"]),
+        most_wins=sorted(stats, key=lambda x: x["wins"], reverse=True),
+        most_clean_sheets=sorted(stats, key=lambda x: x["clean_sheets"], reverse=True),
+        season=season
     )
 
+
 # ==========================================================
-# SETUP
+# PLAYER REGISTRY (permanent identities)
+# ==========================================================
+
+@main.route("/players")
+def player_registry():
+    from .services.analytics_service import AnalyticsService
+    rows = AnalyticsService.get_career_leaderboard()
+    return render_template("player_registry.html", rows=rows)
+
+
+@main.route("/players/<player_code>")
+def player_profile(player_code):
+    player = Player.query.filter_by(player_code=player_code).first_or_404()
+    all_seasons = Season.query.order_by(Season.season_number).all()
+
+    history = []
+    for season in all_seasons:
+        assignment = SeasonAssignment.query.filter_by(
+            season_id=season.id, player_id=player.id
+        ).first()
+        history.append({
+            "season": season.name,
+            "club": assignment.team.name if assignment else "Did Not Participate"
+        })
+
+    from .services.elo_engine import EloEngine
+    career = EloEngine.get_career_rating(player.id)
+
+    return render_template(
+        "player_profile.html", player=player, history=history, career=career
+    )
+
+
+# ==========================================================
+# SETUP (builds groups from THIS season's SeasonAssignments)
 # ==========================================================
 
 @main.route("/setup")
 @login_required
 def setup():
-    if stage_exists("group"):
-        return "❌ Tournament already started."
+    season = get_active_season()
+    if not season:
+        return "❌ No active season. Create and activate one first."
 
-    Match.query.delete()
-    Team.query.delete()
-    Group.query.delete()
+    if stage_exists("group", season.id):
+        return "❌ Groups already generated for this season."
+
+    assignments = SeasonAssignment.query.filter_by(season_id=season.id).all()
+    if len(assignments) < MIN_TEAMS_PER_SEASON:
+        return f"❌ Need at least {MIN_TEAMS_PER_SEASON} assigned teams. Currently: {len(assignments)}."
+
+    if not season.num_groups:
+        return "❌ Season config missing. Finalize team selection in admin first."
+
+    Group.query.filter_by(season_id=season.id).delete()
     db.session.commit()
 
-    group_names = ["Group A", "Group B", "Group C", "Group D", "Group E"]
+    group_names = [f"Group {chr(65+i)}" for i in range(season.num_groups)]
     groups = []
-
     for name in group_names:
-        group = Group(name=name)
-        db.session.add(group)
+        g = Group(name=name, season_id=season.id)
+        db.session.add(g)
         db.session.flush()
-        groups.append(group)
+        groups.append(g)
 
-    teams = [
-        "TrippleA Bayern","67MERLIN Santos FC","Don Wizziy Dortmund",
-        "Titanboot Liverpool","Blaze Barcelona","Yhomide Real Madrid",
-        "Adegel Chelsea","Babson AC Milan","Qulialau Internet Miami",
-        "Asmev Manchester United","Ariyo Kashim Alters",
-        "Diceyguy Newcastle","Oyee Man City","Obamz Sheffield",
-        "Stay Motivated PSG","Sufas Al Nassr","Danify Arsenal",
-        "Khalil Inter Miami","Wylie Botafogo","Drex Juventus"
-    ]
+    assignment_ids = [a.id for a in assignments]
+    distributed = distribute_ids_into_groups(assignment_ids, season.num_groups)
 
-    random.shuffle(teams)
-
-    index = 0
-    for group in groups:
-        for _ in range(4):
-            db.session.add(Team(name=teams[index], group=group))
-            index += 1
+    for group, id_list in zip(groups, distributed):
+        for assignment_id in id_list:
+            SeasonAssignment.query.get(assignment_id).group_id = group.id
 
     db.session.commit()
+    return f"✅ {len(assignments)} teams split into {season.num_groups} groups!"
 
-    return "✅ Groups Created Successfully!"
 
 # ==========================================================
 # GENERATE GROUP FIXTURES
@@ -354,43 +380,34 @@ def setup():
 @main.route("/generate-group-fixtures")
 @login_required
 def generate_group_fixtures():
-
-    if stage_exists("group"):
+    season = get_active_season()
+    if not season:
+        return "❌ No active season."
+    if stage_exists("group", season.id):
         return "❌ Group fixtures already generated."
 
-    groups = Group.query.all()
+    groups = Group.query.filter_by(season_id=season.id).all()
 
     for group in groups:
-        teams = group.teams
-        n = len(teams)
-        rotation = teams[:]
+        assignment_ids = [a.id for a in group.assignments]
+        rounds = generate_round_robin(assignment_ids)
 
-        for round_num in range(n - 1):
-            for i in range(n // 2):
-                t1 = rotation[i]
-                t2 = rotation[n - 1 - i]
-
+        for matchday_num, pairs in enumerate(rounds, start=1):
+            for home_id, away_id in pairs:
                 db.session.add(Match(
-                    home_team_id=t1.id,
-                    away_team_id=t2.id,
-                    stage="group",
-                    group_id=group.id,
-                    matchday=round_num + 1
+                    home_assignment_id=home_id, away_assignment_id=away_id,
+                    stage="group", group_id=group.id,
+                    matchday=matchday_num, season_id=season.id
                 ))
-
                 db.session.add(Match(
-                    home_team_id=t2.id,
-                    away_team_id=t1.id,
-                    stage="group",
-                    group_id=group.id,
-                    matchday=round_num + 1
+                    home_assignment_id=away_id, away_assignment_id=home_id,
+                    stage="group", group_id=group.id,
+                    matchday=matchday_num, season_id=season.id
                 ))
-
-            rotation = [rotation[0]] + [rotation[-1]] + rotation[1:-1]
 
     db.session.commit()
-
     return "✅ Group Fixtures Generated!"
+
 
 # ==========================================================
 # PUBLIC STAGE ROUTES
@@ -398,57 +415,79 @@ def generate_group_fixtures():
 
 @main.route("/r16")
 def r16():
-    matches = Match.query.filter_by(stage="r16").all()
+    season = get_active_season()
+    matches = Match.query.filter_by(stage="r16", season_id=season.id).all() if season else []
     return render_template("r16.html", matches=matches)
 
 @main.route("/quarterfinal")
 def quarterfinal():
-    matches = Match.query.filter_by(stage="quarter").all()
+    season = get_active_season()
+    matches = Match.query.filter_by(stage="quarter", season_id=season.id).all() if season else []
     return render_template("quarterfinal.html", matches=matches)
 
 @main.route("/semifinal")
 def semifinal():
-    matches = Match.query.filter_by(stage="semi").all()
+    season = get_active_season()
+    matches = Match.query.filter_by(stage="semi", season_id=season.id).all() if season else []
     return render_template("knockout_stage.html", matches=matches)
 
 @main.route("/third-place")
 def third_place():
-    matches = Match.query.filter_by(stage="third").all()
+    season = get_active_season()
+    matches = Match.query.filter_by(stage="third", season_id=season.id).all() if season else []
     return render_template("knockout_single.html", matches=matches)
 
 @main.route("/final")
 def final():
-    matches = Match.query.filter_by(stage="final").all()
+    season = get_active_season()
+    matches = Match.query.filter_by(stage="final", season_id=season.id).all() if season else []
     return render_template("final_celebration.html", matches=matches)
 
 @main.route("/bracket")
 def bracket():
     return render_template("bracket.html")
+
+
+# ==========================================================
+# ANALYTICS
+# ==========================================================
+
 @main.route("/analytics")
 def analytics():
     rankings = AnalyticsService.get_power_rankings()
     return render_template("analytics.html", rankings=rankings)
+
+
+@main.route("/leaderboard")
+def leaderboard():
+    rows = AnalyticsService.get_career_leaderboard()
+    return render_template("leaderboard.html", rows=rows)
+
+
+# ==========================================================
+# PREDICT
+# ==========================================================
+
 @main.route("/predict", methods=["GET", "POST"])
 def predict():
+    season = get_active_season()
+    players = []
+    if season:
+        assigned_ids = [a.player_id for a in SeasonAssignment.query.filter_by(season_id=season.id).all()]
+        players = Player.query.filter(Player.id.in_(assigned_ids)).all()
 
-    teams = Team.query.all()
     prediction = None
-    team_a = team_b = None
+    player_a = player_b = None
 
     if request.method == "POST":
-        team_a_id = request.form.get("team_a")
-        team_b_id = request.form.get("team_b")
-
-        if team_a_id and team_b_id and team_a_id != team_b_id:
-            team_a = Team.query.get(int(team_a_id))
-            team_b = Team.query.get(int(team_b_id))
-
-            prediction = AnalyticsService.predict_match(team_a, team_b)
+        a_id = request.form.get("team_a")
+        b_id = request.form.get("team_b")
+        if a_id and b_id and a_id != b_id:
+            player_a = Player.query.get(int(a_id))
+            player_b = Player.query.get(int(b_id))
+            prediction = AnalyticsService.predict_match(player_a, player_b)
 
     return render_template(
-        "predict.html",
-        teams=teams,
-        prediction=prediction,
-        team_a=team_a,
-        team_b=team_b
+        "predict.html", teams=players, prediction=prediction,
+        team_a=player_a, team_b=player_b
     )
