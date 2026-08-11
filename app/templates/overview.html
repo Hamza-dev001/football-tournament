@@ -24,7 +24,7 @@
 {% endif %}
 
 <!-- ✅ GENERATE QUARTER -->
-{% if context.r16_exists and not quarter_exists %}
+{% if r16_exists and not quarter_exists %}
     <div class="mb-3">
         <a href="/admin/generate-quarter" class="btn btn-secondary">
             🟣 Generate Quarterfinal
@@ -61,12 +61,12 @@
 
 <hr>
 
-<h4>✅ Qualified Teams (Top 3 Per Group)</h4>
+<h4>✅ Qualified Teams</h4>
 
 <ul class="list-group mt-3">
-    {% for team in context.qualified_teams %}
+    {% for row in context.qualified_teams %}
         <li class="list-group-item bg-dark text-white">
-            {{ team.team.name }} ({{ team.group }})
+            {{ row.assignment.team.name }} ({{ row.assignment.player.username }}) — {{ row.group }}
         </li>
     {% endfor %}
 </ul>
