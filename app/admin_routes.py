@@ -455,7 +455,9 @@ def dangerous_reset_database(secret_key):
 
     try:
         # 1. Drop ALL old tables (old schema included)
-        db.drop_all()
+        db.session.execute(text("DROP SCHEMA public CASCADE;"))
+        db.session.execute(text("CREATE SCHEMA public;"))
+        db.session.commit()
 
         # 2. Create fresh tables with the new schema
         db.create_all()
