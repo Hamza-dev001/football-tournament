@@ -5,7 +5,10 @@ from sqlalchemy import or_
 from datetime import datetime
 import random
 
-from .models import User, Match, Group, Season, Team, SeasonAssignment, get_active_season
+from .models import (
+    User, Match, Group, Season, Team, SeasonAssignment,
+    EloHistory, PlayerSeasonRating, get_active_season
+)
 from . import db
 from .routes import stage_exists, stage_complete
 from .services.elo_engine import EloEngine
@@ -97,7 +100,7 @@ def dashboard():
 
 
 # ==========================================================
-# BULK SCORE UPDATE — now triggers dual ELO processing
+# BULK SCORE UPDATE — triggers dual ELO processing
 # ==========================================================
 
 @admin.route("/bulk-update", methods=["POST"])
@@ -338,9 +341,10 @@ def generate_r16():
 
 # ==========================================================
 # GENERATE NEXT STAGE (generic — quarter/semi/final/third)
+# Supports use_losers=True for Third Place playoff
 # ==========================================================
 
-def generate_next_stage(current_stage, next_stage):
+def generate_next_stage(current_stage, next_stage, use_losers=False):
     season = get_active_season()
 
     if stage_exists(next_stage, season.id):
@@ -349,22 +353,29 @@ def generate_next_stage(current_stage, next_stage):
         return f"❌ Complete {current_stage} first."
 
     matches = Match.query.filter_by(stage=current_stage, season_id=season.id).all()
-    winners = []
+    advancing = []
 
     for m in matches:
         if m.home_score is None:
             return f"❌ Some matches in {current_stage} are incomplete."
-        if m.home_score > m.away_score:
-            winners.append(m.home_assignment_id)
+
+        if use_losers:
+            if m.home_score > m.away_score:
+                advancing.append(m.away_assignment_id)
+            else:
+                advancing.append(m.home_assignment_id)
         else:
-            winners.append(m.away_assignment_id)
+            if m.home_score > m.away_score:
+                advancing.append(m.home_assignment_id)
+            else:
+                advancing.append(m.away_assignment_id)
 
-    if len(winners) % 2 != 0:
-        return "❌ Uneven winners — cannot generate next stage."
+    if len(advancing) % 2 != 0:
+        return f"❌ Uneven {'losers' if use_losers else 'winners'} — cannot generate {next_stage}."
 
-    for i in range(0, len(winners), 2):
+    for i in range(0, len(advancing), 2):
         db.session.add(Match(
-            home_assignment_id=winners[i], away_assignment_id=winners[i+1],
+            home_assignment_id=advancing[i], away_assignment_id=advancing[i+1],
             stage=next_stage, matchday=1, is_completed=False, season_id=season.id
         ))
 
@@ -385,13 +396,12 @@ def generate_semi():
 @admin.route("/generate-final")
 @login_required
 def generate_final():
-    result = generate_next_stage("semi", "final")
-    return result
+    return generate_next_stage("semi", "final", use_losers=False)
 
 @admin.route("/generate-third")
 @login_required
 def generate_third():
-    return generate_next_stage("semi", "third")
+    return generate_next_stage("semi", "third", use_losers=True)
 
 
 # ==========================================================
@@ -436,8 +446,54 @@ def reset_r16_and_quarter():
     db.session.commit()
     return "✅ R16 and Quarterfinal successfully reset."
 
+
 # ==========================================================
-# TEMPORARY: SOFT RESET AFTER TESTING — DELETE AFTER USE
+# TEMPORARY: RESET SEMI/FINAL/THIRD — DELETE AFTER USE
+# ==========================================================
+
+@admin.route("/reset-semi-onward/<secret_key>")
+def reset_semi_onward(secret_key):
+    RESET_KEY = "Hamza123456"
+
+    if secret_key != RESET_KEY:
+        return "❌ Invalid key.", 403
+
+    season = get_active_season()
+    if not season:
+        return "❌ No active season."
+
+    try:
+        matches = Match.query.filter(
+            Match.season_id == season.id,
+            Match.stage.in_(["semi", "final", "third"])
+        ).all()
+
+        for m in matches:
+            if m.elo_processed:
+                EloEngine.revert_match(m)
+
+        Match.query.filter(
+            Match.season_id == season.id,
+            Match.stage.in_(["final", "third"])
+        ).delete(synchronize_session=False)
+
+        semi_matches = Match.query.filter_by(stage="semi", season_id=season.id).all()
+        for m in semi_matches:
+            m.home_score = None
+            m.away_score = None
+            m.is_completed = False
+            m.elo_processed = False
+
+        db.session.commit()
+        return "✅ Semi, Final, and Third Place cleared. Semi reset to unplayed. Re-score Semi, then regenerate Final and Third Place."
+
+    except Exception as e:
+        db.session.rollback()
+        return f"❌ RESET FAILED: {str(e)}", 500
+
+
+# ==========================================================
+# TEMPORARY: SOFT RESET FULL SEASON — DELETE AFTER USE
 # ==========================================================
 
 @admin.route("/dangerous-soft-reset/<secret_key>")
@@ -452,8 +508,6 @@ def dangerous_soft_reset(secret_key):
         return "❌ No active season."
 
     try:
-        from ..models import EloHistory, Match, Group, SeasonAssignment, PlayerSeasonRating
-
         match_ids = [m.id for m in Match.query.filter_by(season_id=season.id).all()]
         EloHistory.query.filter(EloHistory.match_id.in_(match_ids)).delete(synchronize_session=False)
 
@@ -467,7 +521,7 @@ def dangerous_soft_reset(secret_key):
         season.wildcard_slots = 1
 
         db.session.commit()
-        return "✅ SOFT RESET COMPLETE — Season 1 cleared. Player registry untouched."
+        return "✅ SOFT RESET COMPLETE — Season cleared. Player registry untouched."
 
     except Exception as e:
         db.session.rollback()
