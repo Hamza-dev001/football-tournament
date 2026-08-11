@@ -445,7 +445,7 @@ def reset_r16_and_quarter():
 def dangerous_reset_database(secret_key):
 
     # ===== EDIT THESE 3 LINES BEFORE DEPLOYING =====
-    RESET_KEY = "Hamza_TFL_2026!Reset_84Kx#29LmQ7"
+    RESET_KEY = "HamzaSecure2026Reset84Kx29LmQ7"
     ADMIN_USERNAME = "Hamza"
     ADMIN_PASSWORD = "HamzaSecure2026!!!"
     # ================================================
