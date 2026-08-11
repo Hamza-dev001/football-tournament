@@ -1,207 +1,110 @@
-from sqlalchemy import or_
-from app.models import Team, Match
+from ..models import Player, get_active_season
+from .elo_engine import EloEngine
 
 
 class AnalyticsService:
 
-    # --------------------------------------------------
-    # CALCULATE FULL TEAM STATS
-    # --------------------------------------------------
-
     @staticmethod
-    def calculate_team_stats(team):
-
-        matches = Match.query.filter(
-            or_(
-                Match.home_team_id == team.id,
-                Match.away_team_id == team.id
-            )
-        ).order_by(Match.id.desc()).all()
-
-        played = wins = draws = losses = 0
-        goals_scored = goals_conceded = 0
-        clean_sheets = 0
-        points = 0
-
-        recent_form = []  # last 3 matches
-
-        for m in matches:
-            if m.home_score is None:
-                continue
-
-            if m.home_team_id == team.id:
-                gf = m.home_score
-                ga = m.away_score
-            else:
-                gf = m.away_score
-                ga = m.home_score
-
-            played += 1
-            goals_scored += gf
-            goals_conceded += ga
-
-            # Determine result
-            if gf > ga:
-                wins += 1
-                points += 3
-                result = "W"
-            elif gf == ga:
-                draws += 1
-                points += 1
-                result = "D"
-            else:
-                losses += 1
-                result = "L"
-
-            if ga == 0:
-                clean_sheets += 1
-
-            # Store last 3 results
-            if len(recent_form) < 3:
-                recent_form.append(result)
-
-        return {
-            "team": team,
-            "played": played,
-            "wins": wins,
-            "draws": draws,
-            "losses": losses,
-            "points": points,
-            "goals_scored": goals_scored,
-            "goals_conceded": goals_conceded,
-            "goal_difference": goals_scored - goals_conceded,
-            "clean_sheets": clean_sheets,
-            "form": recent_form
-        }
-
-    # --------------------------------------------------
-    # ADVANCED METRICS
-    # --------------------------------------------------
-
-    @staticmethod
-    def calculate_attack_rating(stats):
-        if stats["played"] == 0:
+    def calculate_efficiency(rating):
+        if rating.matches_played == 0:
             return 0
-        return round(stats["goals_scored"] / stats["played"] * 10, 2)
+        points = (rating.wins * 3) + rating.draws
+        return round(points / rating.matches_played, 2)
 
     @staticmethod
-    def calculate_defense_rating(stats):
-        if stats["played"] == 0:
+    def calculate_attack_rating(rating):
+        if rating.matches_played == 0:
             return 0
-        defensive_strength = (stats["clean_sheets"] * 2) - stats["goals_conceded"]
-        return round(defensive_strength, 2)
+        return round(rating.goals_scored / rating.matches_played * 10, 2)
 
     @staticmethod
-    def calculate_efficiency(stats):
-        if stats["played"] == 0:
+    def calculate_defense_rating(rating):
+        if rating.matches_played == 0:
             return 0
-        return round(stats["points"] / stats["played"], 2)
+        return round((rating.clean_sheets * 2) - rating.goals_conceded, 2)
 
     @staticmethod
-    def calculate_form_score(stats):
-
-        score = 0
-        for result in stats["form"]:
-            if result == "W":
-                score += 3
-            elif result == "D":
-                score += 1
-
-        return score
-
-    # --------------------------------------------------
-    # PERFORMANCE SCORE (UPDATED FORMULA)
-    # --------------------------------------------------
-
-    @staticmethod
-    def calculate_performance_score(stats):
-
-        attack = AnalyticsService.calculate_attack_rating(stats)
-        defense = AnalyticsService.calculate_defense_rating(stats)
-        efficiency = AnalyticsService.calculate_efficiency(stats)
-        form_score = AnalyticsService.calculate_form_score(stats)
-
-        score = (
-            (stats["points"] * 2)
-            + (stats["goal_difference"] * 1.5)
-            + attack
-            + defense
-            + (efficiency * 5)
-            + form_score
-        )
-
-        return round(score, 2)
-
-    # --------------------------------------------------
-    # TIER SYSTEM
-    # --------------------------------------------------
-
-    @staticmethod
-    def assign_tier(score):
-
-        if score >= 120:
+    def assign_tier(elo):
+        if elo >= 1750:
             return "Legendary"
-        elif score >= 95:
+        elif elo >= 1620:
             return "Elite"
-        elif score >= 75:
+        elif elo >= 1520:
             return "Strong"
-        elif score >= 55:
+        elif elo >= 1420:
             return "Competitive"
-        else:
-            return "Developing"
-
-    # --------------------------------------------------
-    # FINAL POWER RANKINGS
-    # --------------------------------------------------
+        return "Developing"
 
     @staticmethod
     def get_power_rankings():
+        """Current-season live rankings, driven by PlayerSeasonRating."""
+        season = get_active_season()
+        if not season:
+            return []
 
-        teams = Team.query.all()
         rankings = []
+        for player in Player.query.filter_by(status="ACTIVE").all():
+            season_rating = EloEngine.get_season_rating(player.id, season.id)
 
-        for team in teams:
-            stats = AnalyticsService.calculate_team_stats(team)
+            rankings.append({
+                "player": player,
+                "elo": round(season_rating.current_elo, 1),
+                "peak_elo": round(season_rating.peak_elo, 1),
+                "played": season_rating.matches_played,
+                "wins": season_rating.wins,
+                "draws": season_rating.draws,
+                "losses": season_rating.losses,
+                "goals_scored": season_rating.goals_scored,
+                "goals_conceded": season_rating.goals_conceded,
+                "goal_difference": season_rating.goals_scored - season_rating.goals_conceded,
+                "clean_sheets": season_rating.clean_sheets,
+                "attack_rating": AnalyticsService.calculate_attack_rating(season_rating),
+                "defense_rating": AnalyticsService.calculate_defense_rating(season_rating),
+                "efficiency": AnalyticsService.calculate_efficiency(season_rating),
+                "tier": AnalyticsService.assign_tier(season_rating.current_elo),
+            })
 
-            stats["attack_rating"] = AnalyticsService.calculate_attack_rating(stats)
-            stats["defense_rating"] = AnalyticsService.calculate_defense_rating(stats)
-            stats["efficiency"] = AnalyticsService.calculate_efficiency(stats)
-            stats["form_score"] = AnalyticsService.calculate_form_score(stats)
-
-            performance = AnalyticsService.calculate_performance_score(stats)
-            stats["performance_score"] = performance
-            stats["tier"] = AnalyticsService.assign_tier(performance)
-
-            rankings.append(stats)
-
-        rankings.sort(key=lambda x: x["performance_score"], reverse=True)
-
+        rankings.sort(key=lambda x: x["elo"], reverse=True)
         return rankings
-        # --------------------------------------------------
-    # AI MATCH PREDICTION
-    # --------------------------------------------------
 
     @staticmethod
-    def predict_match(team_a, team_b):
+    def get_career_leaderboard():
+        """All-time leaderboard, driven by PlayerCareerRating. Never resets."""
+        players = Player.query.all()
+        rows = []
+        for player in players:
+            career = EloEngine.get_career_rating(player.id)
+            rows.append({
+                "player": player,
+                "elo": round(career.current_elo, 1),
+                "peak_elo": round(career.peak_elo, 1),
+                "played": career.matches_played,
+                "wins": career.wins,
+                "draws": career.draws,
+                "losses": career.losses,
+                "titles": player.titles_won,
+                "status": player.status,
+            })
+        rows.sort(key=lambda x: x["elo"], reverse=True)
+        return rows
 
-        stats_a = AnalyticsService.calculate_team_stats(team_a)
-        stats_b = AnalyticsService.calculate_team_stats(team_b)
+    @staticmethod
+    def predict_match(player_a, player_b):
+        season = get_active_season()
+        rating_a = EloEngine.get_season_rating(player_a.id, season.id)
+        rating_b = EloEngine.get_season_rating(player_b.id, season.id)
 
-        score_a = AnalyticsService.calculate_performance_score(stats_a)
-        score_b = AnalyticsService.calculate_performance_score(stats_b)
+        prob_a = EloEngine.expected_score(rating_a.current_elo, rating_b.current_elo) * 100
+        prob_b = 100 - prob_a
+        elo_gap = rating_a.current_elo - rating_b.current_elo
 
-        total = score_a + score_b
-
-        if total == 0:
-            return {
-                "team_a_prob": 50,
-                "team_b_prob": 50
-            }
-
-        prob_a = round((score_a / total) * 100, 2)
-        prob_b = round((score_b / total) * 100, 2)
+        confidence = "High" if abs(elo_gap) > 150 else "Moderate" if abs(elo_gap) > 60 else "Toss-up"
 
         return {
-            "team_a_prob": prob_a,
-            "team_b_prob": prob_b
+            "team_a_prob": round(prob_a, 2),
+            "team_b_prob": round(prob_b, 2),
+            "elo_a": round(rating_a.current_elo, 1),
+            "elo_b": round(rating_b.current_elo, 1),
+            "elo_gap": round(elo_gap, 1),
+            "confidence": confidence
         }
