@@ -435,3 +435,40 @@ def reset_r16_and_quarter():
 
     db.session.commit()
     return "✅ R16 and Quarterfinal successfully reset."
+
+# ==========================================================
+# TEMPORARY: SOFT RESET AFTER TESTING — DELETE AFTER USE
+# ==========================================================
+
+@admin.route("/dangerous-soft-reset/<secret_key>")
+def dangerous_soft_reset(secret_key):
+    RESET_KEY = "Hamza123456"
+
+    if secret_key != RESET_KEY:
+        return "❌ Invalid key.", 403
+
+    season = get_active_season()
+    if not season:
+        return "❌ No active season."
+
+    try:
+        from ..models import EloHistory, Match, Group, SeasonAssignment, PlayerSeasonRating
+
+        match_ids = [m.id for m in Match.query.filter_by(season_id=season.id).all()]
+        EloHistory.query.filter(EloHistory.match_id.in_(match_ids)).delete(synchronize_session=False)
+
+        Match.query.filter_by(season_id=season.id).delete()
+        Group.query.filter_by(season_id=season.id).delete()
+        SeasonAssignment.query.filter_by(season_id=season.id).delete()
+        PlayerSeasonRating.query.filter_by(season_id=season.id).delete()
+
+        season.num_groups = None
+        season.qualifiers_per_group = 3
+        season.wildcard_slots = 1
+
+        db.session.commit()
+        return "✅ SOFT RESET COMPLETE — Season 1 cleared. Player registry untouched."
+
+    except Exception as e:
+        db.session.rollback()
+        return f"❌ SOFT RESET FAILED: {str(e)}", 500
