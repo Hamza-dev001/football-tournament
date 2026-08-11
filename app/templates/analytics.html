@@ -5,66 +5,60 @@
 
 <div class="card bg-dark text-white p-4">
 
-{% for team in rankings %}
+{% for entry in rankings %}
     <div class="mb-4 p-3 border rounded">
 
         <h4>
             {% if loop.index == 1 %}👑 {% endif %}
-            {{ loop.index }}. {{ team.team.name }}
+            {{ loop.index }}. {{ entry.player.username }}
+            <small style="color:#888;">({{ entry.player.player_code }})</small>
         </h4>
 
-        <!-- ✅ Animated Performance Score -->
-        <strong>Performance Score:</strong>
-        <span class="counter" data-target="{{ team.performance_score }}">
-            0
-        </span>
+        <!-- ✅ Animated ELO -->
+        <strong>Season ELO:</strong>
+        <span class="counter" data-target="{{ entry.elo }}">0</span>
 
-        <!-- ✅ Animated Performance Bar -->
+        <!-- ✅ Animated Performance Bar (relative to #1 ranked ELO) -->
         <div style="background:#222; height:8px; border-radius:5px; margin-top:6px;">
             <div class="progress-bar-fill"
-                 data-percent="{{ (team.performance_score / rankings[0].performance_score) * 100 }}">
+                 data-percent="{{ (entry.elo / rankings[0].elo) * 100 }}">
             </div>
         </div>
 
         <br>
 
-        <strong>Tier:</strong> {{ team.tier }} <br><br>
+        <strong>Tier:</strong> {{ entry.tier }} <br><br>
 
         <small>
-            Points: {{ team.points }} |
-            GD: {{ team.goal_difference }} |
-            Goals: {{ team.goals_scored }} |
-            Clean Sheets: {{ team.clean_sheets }}
+            Played: {{ entry.played }} |
+            W: {{ entry.wins }} D: {{ entry.draws }} L: {{ entry.losses }} |
+            Points: {{ (entry.wins * 3) + entry.draws }} |
+            GD: {{ entry.goal_difference }} |
+            Goals: {{ entry.goals_scored }} |
+            Clean Sheets: {{ entry.clean_sheets }}
         </small>
 
         <hr>
 
         <small>
             ⚔ Attack Rating:
-            <span class="counter" data-target="{{ team.attack_rating }}">0</span>
+            <span class="counter" data-target="{{ entry.attack_rating }}">0</span>
             <br>
 
             🛡 Defense Rating:
-            <span class="counter" data-target="{{ team.defense_rating }}">0</span>
+            <span class="counter" data-target="{{ entry.defense_rating }}">0</span>
             <br>
 
             ⚡ Efficiency:
-            <span class="counter" data-target="{{ team.efficiency }}">0</span>
+            <span class="counter" data-target="{{ entry.efficiency }}">0</span>
             <br>
 
-            📈 Form (Last 3):
-            {% for result in team.form %}
-                {% if result == "W" %}
-                    <span style="color:#00ff88;">W</span>
-                {% elif result == "D" %}
-                    <span style="color:#ffc107;">D</span>
-                {% else %}
-                    <span style="color:#ff4444;">L</span>
-                {% endif %}
-            {% endfor %}
+            🏔 Peak ELO: {{ entry.peak_elo }}
         </small>
 
     </div>
+{% else %}
+    <p class="text-center">No active players this season yet. Assign players in Season Entries first.</p>
 {% endfor %}
 
 </div>
@@ -73,7 +67,6 @@
 <script>
 document.addEventListener("DOMContentLoaded", function(){
 
-    // Animate counters
     document.querySelectorAll(".counter").forEach(counter => {
         let target = parseFloat(counter.getAttribute("data-target"));
         let count = 0;
@@ -92,7 +85,6 @@ document.addEventListener("DOMContentLoaded", function(){
         update();
     });
 
-    // Animate progress bars
     document.querySelectorAll(".progress-bar-fill").forEach(bar => {
         let percent = bar.getAttribute("data-percent");
 
