@@ -1,6 +1,5 @@
 from .seed_teams import seed_teams
 from flask import Blueprint, render_template, redirect, url_for, request, session
-
 from flask_login import login_user, login_required, logout_user
 from sqlalchemy import or_
 from datetime import datetime
