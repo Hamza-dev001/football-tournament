@@ -472,11 +472,18 @@ def reset_semi_onward(secret_key):
             if m.elo_processed:
                 EloEngine.revert_match(m)
 
+        match_ids = [m.id for m in matches]
+
+        # Delete EloHistory rows first — they reference these matches
+        EloHistory.query.filter(EloHistory.match_id.in_(match_ids)).delete(synchronize_session=False)
+
+        # Now safe to delete Final and Third Place matches
         Match.query.filter(
             Match.season_id == season.id,
             Match.stage.in_(["final", "third"])
         ).delete(synchronize_session=False)
 
+        # Reset Semi matches to unplayed (don't delete them)
         semi_matches = Match.query.filter_by(stage="semi", season_id=season.id).all()
         for m in semi_matches:
             m.home_score = None
