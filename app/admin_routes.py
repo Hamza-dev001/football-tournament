@@ -1,3 +1,4 @@
+from .seed_teams import seed_teams
 from flask import Blueprint, render_template, redirect, url_for, request, session
 from flask_login import login_user, login_required, logout_user
 from sqlalchemy import or_
@@ -434,3 +435,54 @@ def reset_r16_and_quarter():
 
     db.session.commit()
     return "✅ R16 and Quarterfinal successfully reset."
+
+
+# ==========================================================
+# TEMPORARY: ONE-TIME DATABASE RESET — DELETE AFTER USE
+# ==========================================================
+
+@admin.route("/dangerous-reset-database/<secret_key>")
+def dangerous_reset_database(secret_key):
+
+    # ===== EDIT THESE 3 LINES BEFORE DEPLOYING =====
+    RESET_KEY = "Hamza_TFL_2026!Reset_84Kx#29LmQ7"
+    ADMIN_USERNAME = "Hamza"
+    ADMIN_PASSWORD = "HamzaSecure2026!!!"
+    # ================================================
+
+    if secret_key != RESET_KEY:
+        return "❌ Invalid key.", 403
+
+    try:
+        # 1. Drop ALL old tables (old schema included)
+        db.drop_all()
+
+        # 2. Create fresh tables with the new schema
+        db.create_all()
+
+        # 3. Recreate the admin login account
+        admin_user = User(username=ADMIN_USERNAME)
+        admin_user.set_password(ADMIN_PASSWORD)
+        db.session.add(admin_user)
+        db.session.commit()
+
+        # 4. Seed the 20 static clubs
+        seed_teams()
+
+        # 5. Create and activate Season 1
+        season = SeasonManager.create_season("Season 1")
+        SeasonManager.activate_season(season.id)
+
+        return (
+            "✅ RESET COMPLETE<br><br>"
+            "• Old tables dropped<br>"
+            "• New tables created<br>"
+            "• Admin account recreated<br>"
+            "• 20 clubs seeded<br>"
+            "• Season 1 created and activated<br><br>"
+            "<b>NOW DELETE THIS ROUTE AND REDEPLOY.</b>"
+        )
+
+    except Exception as e:
+        db.session.rollback()
+        return f"❌ RESET FAILED: {str(e)}", 500
