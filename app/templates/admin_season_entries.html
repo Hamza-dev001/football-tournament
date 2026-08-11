@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+  .entries-container { max-width: 900px; margin: 0 auto; padding: 20px; }
+  .neon-panel {
+    background: #0d0d14;
+    border: 2px solid #0ff;
+    border-radius: 12px;
+    box-shadow: 0 0 15px rgba(0,255,255,0.35);
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .neon-title { color: #ffd700; text-shadow: 0 0 10px rgba(255,215,0,0.6); margin-top: 0; }
+  .neon-label { color: #0ff; font-weight: bold; display: block; margin: 12px 0 6px; }
+  .neon-input, .neon-select {
+    width: 100%; padding: 10px; background: #000; color: #0ff;
+    border: 1px solid #0ff; border-radius: 6px; font-size: 16px;
+  }
+  .btn-neon {
+    display: inline-block; margin-top: 16px; padding: 12px 28px;
+    background: transparent; color: #0ff; border: 2px solid #0ff;
+    border-radius: 8px; font-size: 16px; font-weight: bold;
+    cursor: pointer; text-shadow: 0 0 8px rgba(0,255,255,0.7);
+    box-shadow: 0 0 12px rgba(0,255,255,0.4);
+  }
+  .btn-neon:hover { background: rgba(0,255,255,0.12); }
+  .btn-gold {
+    border-color: #ffd700; color: #ffd700;
+    text-shadow: 0 0 8px rgba(255,215,0,0.7);
+    box-shadow: 0 0 12px rgba(255,215,0,0.4);
+  }
+  .btn-gold:hover { background: rgba(255,215,0,0.12); }
+  .entry-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 14px; margin: 8px 0;
+    background: #11111c; border: 1px solid #0ff3; border-radius: 8px;
+    color: #eee;
+  }
+  .entry-club { color: #0ff; font-weight: bold; }
+  .entry-player { color: #ffd700; }
+  .entry-code { color: #888; font-size: 13px; }
+  .remove-link { color: #ff5555; text-decoration: none; font-size: 14px; }
+  .remove-link:hover { text-shadow: 0 0 8px #ff5555; }
+  .count-badge {
+    display: inline-block; padding: 4px 14px; border: 1px solid #ffd700;
+    border-radius: 20px; color: #ffd700; font-weight: bold;
+  }
+  .hint { color: #888; font-size: 14px; }
+  .config-line { color: #0ff; font-size: 17px; }
+  .next-steps a { color: #0ff; display: block; margin: 8px 0; font-size: 17px; }
+</style>
+
+<div class="entries-container">
+
+  <div class="neon-panel">
+    <h2 class="neon-title">⚽ {{ season.name }} — Player Assignments</h2>
+    <p class="hint">Type a username, pick a club, hit Assign. New usernames are registered automatically with a permanent Player ID.</p>
+    <p><span class="count-badge">{{ entries|length }} / 20 assigned</span>
+       <span class="hint">(minimum {{ min_teams }} required)</span></p>
+  </div>
+
+  {% if available_clubs %}
+  <div class="neon-panel">
+    <form method="POST">
+      <label class="neon-label">Username</label>
+      <input class="neon-input" type="text" name="username" placeholder="e.g. DREX" required>
+
+      <label class="neon-label">Club</label>
+      <select class="neon-select" name="team_id" required>
+        {% for club in available_clubs %}
+          <option value="{{ club.id }}">{{ club.name }}</option>
+        {% endfor %}
+      </select>
+
+      <button type="submit" class="btn-neon">Assign Player</button>
+    </form>
+  </div>
+  {% endif %}
+
+  <div class="neon-panel">
+    <h3 class="neon-title">Current Assignments</h3>
+
+    {% if entries %}
+      {% for e in entries %}
+        <div class="entry-row">
+          <div>
+            <span class="entry-club">{{ e.team.name }}</span>
+            →
+            <span class="entry-player">{{ e.player.username }}</span>
+            <span class="entry-code">({{ e.player.player_code }})</span>
+          </div>
+          <a class="remove-link" href="{{ url_for('admin.remove_season_entry', assignment_id=e.id) }}"
+             onclick="return confirm('Remove {{ e.player.username }} from {{ e.team.name }}?')">✖ Remove</a>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p class="hint">No players assigned yet.</p>
+    {% endif %}
+  </div>
+
+  {% if entries|length >= min_teams %}
+  <div class="neon-panel">
+    <h3 class="neon-title">Finalize Season Setup</h3>
+
+    {% if suggested %}
+      <p class="config-line">
+        Suggested structure: <b>{{ suggested.num_groups }} groups</b>,
+        top <b>{{ suggested.qualifiers_per_group }}</b> qualify per group
+        {% if suggested.wildcard_slots %}+ <b>{{ suggested.wildcard_slots }}</b> wildcard(s){% endif %}
+      </p>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('admin.finalize_season_entries') }}">
+      <button type="submit" class="btn-neon btn-gold">✔ Confirm Roster & Lock Config</button>
+    </form>
+  </div>
+
+  <div class="neon-panel next-steps">
+    <h3 class="neon-title">After Finalizing</h3>
+    <a href="{{ url_for('main.setup') }}">1️⃣ Generate Groups (/setup)</a>
+    <a href="{{ url_for('main.generate_group_fixtures') }}">2️⃣ Generate Fixtures</a>
+    <a href="{{ url_for('admin.dashboard') }}">3️⃣ Go to Admin Dashboard</a>
+  </div>
+  {% endif %}
+
+</div>
+
+{% endblock %}
