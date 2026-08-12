@@ -108,11 +108,13 @@
                         📊 Analytics
                     </a>
                 </li>
+                
+                <!-- ✅ AI PREDICTOR LINK -->
                 <li class="nav-item">
-    <a class="nav-link" href="{{ url_for('main.predict') }}">
-        🤖 AI Predictor
-    </a>
-</li>
+                    <a class="nav-link" href="{{ url_for('main.predict') }}">
+                        🤖 AI Predictor
+                    </a>
+                </li>
 
                 <!-- ✅ KNOCKOUT LINKS -->
                 {% if r16_exists %}
@@ -148,6 +150,12 @@
                     <li class="nav-item">
                         <a class="nav-link text-warning" href="{{ url_for('admin.dashboard') }}">Admin</a>
                     </li>
+                    
+                    <!-- ✅ NEW: PLAYER ASSIGNMENTS LINK -->
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('admin.season_entries') }}">⚽ Players</a>
+                    </li>
+
                     <li class="nav-item">
                         <a class="nav-link text-danger" href="{{ url_for('admin.logout') }}">Logout</a>
                     </li>

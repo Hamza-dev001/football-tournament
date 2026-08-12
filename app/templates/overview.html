@@ -3,6 +3,14 @@
 
 <h2 class="mb-4">🏆 Tournament Stage Control</h2>
 
+<!-- ✅ NEW: QUICK ACCESS TO PLAYER ASSIGNMENTS -->
+<div class="alert alert-info d-flex justify-content-between align-items-center mb-4" role="alert">
+    <strong>👥 Player Roster Management</strong>
+    <a href="{{ url_for('admin.season_entries') }}" class="btn btn-outline-light btn-sm">
+        Go to Player Assignments
+    </a>
+</div>
+
 <!-- ✅ GROUP STAGE STATUS -->
 {% if context.group_complete %}
     <div class="alert alert-success">
@@ -17,7 +25,7 @@
 <!-- ✅ GENERATE R16 -->
 {% if context.group_complete and not context.r16_exists %}
     <div class="mb-3">
-        <a href="/admin/generate-r16" class="btn btn-primary">
+        <a href="/admin/generate-r16" class="btn btn-primary w-100">
             🔵 Generate Round of 16
         </a>
     </div>
@@ -26,7 +34,7 @@
 <!-- ✅ GENERATE QUARTER -->
 {% if r16_exists and not quarter_exists %}
     <div class="mb-3">
-        <a href="/admin/generate-quarter" class="btn btn-secondary">
+        <a href="/admin/generate-quarter" class="btn btn-secondary w-100">
             🟣 Generate Quarterfinal
         </a>
     </div>
@@ -35,7 +43,7 @@
 <!-- ✅ GENERATE SEMI -->
 {% if quarter_exists and not semi_exists %}
     <div class="mb-3">
-        <a href="/admin/generate-semi" class="btn btn-warning">
+        <a href="/admin/generate-semi" class="btn btn-warning w-100 text-dark">
             🟠 Generate Semifinal
         </a>
     </div>
@@ -44,7 +52,7 @@
 <!-- ✅ GENERATE FINAL -->
 {% if semi_exists and not final_exists %}
     <div class="mb-3">
-        <a href="/admin/generate-final" class="btn btn-danger">
+        <a href="/admin/generate-final" class="btn btn-danger w-100">
             🔴 Generate Final
         </a>
     </div>
@@ -53,7 +61,7 @@
 <!-- ✅ GENERATE THIRD PLACE -->
 {% if semi_exists and not third_exists %}
     <div class="mb-3">
-        <a href="/admin/generate-third" class="btn btn-info">
+        <a href="/admin/generate-third" class="btn btn-info w-100 text-white">
             🥉 Generate Third Place
         </a>
     </div>
