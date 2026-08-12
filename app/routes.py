@@ -1,524 +1,523 @@
-from flask import Blueprint, render_template, redirect, url_for, request, session
-from flask_login import login_user, login_required, logout_user
+from datetime import timedelta
+from flask import Blueprint, render_template, request
+from flask_login import login_required
 from sqlalchemy import or_
-from datetime import datetime
-import random
 
 from .models import (
-    User, Match, Group, Season, Team, SeasonAssignment,
-    EloHistory, PlayerSeasonRating, get_active_season
+    Group, Team, Match, Season, Player, SeasonAssignment,
+    get_active_season
 )
 from . import db
-from .routes import stage_exists, stage_complete
-from .services.elo_engine import EloEngine
-from .services.season_manager import SeasonManager, now_lagos, next_10am_lagos
-from .services.season_setup import suggest_season_config, MIN_TEAMS_PER_SEASON
+from .services.analytics_service import AnalyticsService
+from .services.season_setup import (
+    distribute_ids_into_groups, generate_round_robin, MIN_TEAMS_PER_SEASON
+)
+from .services.season_manager import now_lagos
 
-admin = Blueprint("admin", __name__)
+main = Blueprint("main", __name__)
 
 
 # ==========================================================
-# MATCHDAY / CLOCK
+# STAGE UTILITIES
 # ==========================================================
 
-def season_clock_running(season=None):
-    season = season or get_active_season()
-    if not season or not season.started_at:
-        return False
-    return now_lagos() >= season.started_at
-
-
-def get_current_matchday():
+def stage_exists(stage_name, season_id=None):
     season = get_active_season()
-    if not season_clock_running(season):
-        return 1
-    diff = now_lagos() - season.started_at
-    return min(diff.days + 1, 3)
-
-
-def is_match_locked(match):
-    if session.get("override_deadline"):
+    season_id = season_id or (season.id if season else None)
+    if not season_id:
         return False
-    if match.stage != "group":
-        return False
-    if not season_clock_running():
-        return False
-
-    current_matchday = get_current_matchday()
-    if match.matchday > current_matchday:
-        return True
-    if match.matchday < current_matchday and match.is_completed:
-        return True
-    return False
+    return Match.query.filter_by(stage=stage_name, season_id=season_id).count() > 0
 
 
-# ==========================================================
-# LOGIN / LOGOUT
-# ==========================================================
-
-@admin.route("/login", methods=["GET", "POST"])
-def login():
-    if request.method == "POST":
-        user = User.query.filter_by(username=request.form.get("username")).first()
-        if user and user.check_password(request.form.get("password")):
-            login_user(user)
-            return redirect(url_for("admin.dashboard"))
-        return "❌ Invalid Credentials"
-    return render_template("admin_login.html")
-
-
-@admin.route("/logout")
-@login_required
-def logout():
-    session.pop("override_deadline", None)
-    logout_user()
-    return redirect(url_for("main.home"))
-
-
-# ==========================================================
-# DASHBOARD
-# ==========================================================
-
-@admin.route("/dashboard")
-@login_required
-def dashboard():
+def stage_complete(stage_name, season_id=None):
     season = get_active_season()
-    stages = ["group", "r16", "quarter", "semi", "third", "final"]
-    data = {}
+    season_id = season_id or (season.id if season else None)
+    if not season_id:
+        return False
+    matches = Match.query.filter_by(stage=stage_name, season_id=season_id).all()
+    if not matches:
+        return False
+    return all(m.is_completed for m in matches)
 
-    if season:
-        for stage in stages:
-            data[stage] = (
-                Match.query
-                .filter_by(stage=stage, season_id=season.id)
-                .order_by(Match.matchday, Match.id)
-                .all()
+
+def tournament_finished():
+    return stage_complete("final")
+
+
+# ==========================================================
+# GLOBAL STAGE CONTEXT
+# ==========================================================
+
+@main.app_context_processor
+def inject_stage_status():
+    season = get_active_season()
+
+    season_started = False
+    countdown_label = "Season has not started"
+    countdown_target = ""
+
+    if not season:
+        return {
+            "r16_exists": False, "quarter_exists": False, "semi_exists": False,
+            "third_exists": False, "final_exists": False,
+            "current_stage": "⚪ No Active Season", "remaining_group_matches": 0,
+            "group_stage_complete": False, "group_done": False, "r16_done": False,
+            "quarter_done": False, "semi_done": False, "final_done": False,
+            "active_season": None,
+            "season_started": False,
+            "countdown_label": countdown_label,
+            "countdown_target": countdown_target
+        }
+
+    if season.started_at:
+        now = now_lagos()
+        if now < season.started_at:
+            countdown_target = season.started_at.isoformat()
+            countdown_label = "Season starts in"
+            season_started = False
+        else:
+            season_started = True
+            matchday = min((now - season.started_at).days + 1, 3)
+            countdown_target = (season.started_at + timedelta(days=matchday)).isoformat()
+            countdown_label = f"Matchday {matchday} ends in"
+
+    if stage_exists("final") and stage_complete("final"):
+        current_stage = "🏆 Tournament Completed"
+    elif stage_exists("final"):
+        current_stage = "🔴 Final"
+    elif stage_exists("semi"):
+        current_stage = "🟠 Semifinal"
+    elif stage_exists("quarter"):
+        current_stage = "🟣 Quarterfinal"
+    elif stage_exists("r16"):
+        current_stage = "🔵 Round of 16"
+    else:
+        current_stage = "🟡 Group Stage"
+
+    group_matches = Match.query.filter_by(stage="group", season_id=season.id).all()
+    remaining_group_matches = sum(1 for m in group_matches if not m.is_completed)
+
+    return {
+        "r16_exists": stage_exists("r16"),
+        "quarter_exists": stage_exists("quarter"),
+        "semi_exists": stage_exists("semi"),
+        "third_exists": stage_exists("third"),
+        "final_exists": stage_exists("final"),
+        "current_stage": current_stage,
+        "remaining_group_matches": remaining_group_matches,
+        "group_stage_complete": stage_complete("group"),
+        "group_done": stage_complete("group"),
+        "r16_done": stage_complete("r16"),
+        "quarter_done": stage_complete("quarter"),
+        "semi_done": stage_complete("semi"),
+        "final_done": stage_complete("final"),
+        "active_season": season,
+        "season_started": season_started,
+        "countdown_label": countdown_label,
+        "countdown_target": countdown_target
+    }
+
+
+# ==========================================================
+# HOME
+# ==========================================================
+
+@main.route("/")
+def home():
+    season = get_active_season()
+    groups = Group.query.filter_by(season_id=season.id).all() if season else []
+    return render_template("home.html", groups=groups, season=season)
+
+
+@main.route("/rules")
+def rules():
+    return render_template("rules.html")
+
+
+# ==========================================================
+# GROUP FIXTURES
+# ==========================================================
+
+@main.route("/group-fixtures")
+def group_fixtures():
+    season = get_active_season()
+    if not season:
+        return render_template("group_fixtures.html", data=[])
+
+    groups = Group.query.filter_by(season_id=season.id).all()
+    data = []
+
+    for group in groups:
+        matches = (
+            Match.query
+            .filter_by(stage="group", group_id=group.id, season_id=season.id)
+            .order_by(Match.matchday, Match.id)
+            .all()
+        )
+        matchdays = {}
+        for match in matches:
+            matchdays.setdefault(match.matchday, []).append(match)
+
+        visible_matchdays = {}
+        for matchday in sorted(matchdays.keys()):
+            matches_in_day = matchdays[matchday]
+            visible_matchdays[matchday] = matches_in_day
+            if not all(m.is_completed for m in matches_in_day):
+                break
+
+        data.append({"group": group, "matchdays": visible_matchdays})
+
+    return render_template("group_fixtures.html", data=data, season=season)
+
+
+# ==========================================================
+# STANDINGS
+# ==========================================================
+
+def _build_group_table(group, season_id):
+    table = []
+    for assignment in group.assignments:
+        played = wins = draws = losses = points = 0
+        gf = ga = 0
+
+        matches = Match.query.filter(
+            Match.stage == "group",
+            Match.season_id == season_id,
+            or_(
+                Match.home_assignment_id == assignment.id,
+                Match.away_assignment_id == assignment.id
             )
+        ).all()
+
+        for m in matches:
+            if m.home_score is None:
+                continue
+            played += 1
+            if m.home_assignment_id == assignment.id:
+                gf += m.home_score; ga += m.away_score
+                if m.home_score > m.away_score: wins += 1; points += 3
+                elif m.home_score == m.away_score: draws += 1; points += 1
+                else: losses += 1
+            else:
+                gf += m.away_score; ga += m.home_score
+                if m.away_score > m.home_score: wins += 1; points += 3
+                elif m.away_score == m.home_score: draws += 1; points += 1
+                else: losses += 1
+
+        table.append({
+            "assignment": assignment, "played": played, "wins": wins,
+            "draws": draws, "losses": losses, "gf": gf, "ga": ga,
+            "gd": gf - ga, "points": points
+        })
+
+    table.sort(key=lambda x: (x["points"], x["gd"], x["gf"]), reverse=True)
+    return table
+
+
+@main.route("/standings")
+def standings():
+    season = get_active_season()
+    if not season:
+        return render_template("group_standings.html", standings_data=[])
+
+    groups = Group.query.filter_by(season_id=season.id).all()
+    standings_data = []
+
+    for group in groups:
+        table = _build_group_table(group, season.id)
+        qualifiers_n = season.qualifiers_per_group or 3
+
+        for index, row in enumerate(table):
+            if index < qualifiers_n:
+                row["status"] = "qualified"
+            elif index == qualifiers_n:
+                row["status"] = "fourth"
+            else:
+                row["status"] = "eliminated"
+
+        standings_data.append({"group": group, "table": table})
+
+    all_rows = [row for g in standings_data for row in g["table"]]
+    top_scoring_team = max(all_rows, key=lambda x: x["gf"]) if all_rows else None
+    best_defense_team = min(all_rows, key=lambda x: x["ga"]) if all_rows else None
 
     return render_template(
-        "admin_dashboard.html",
-        data=data,
-        season=season,
-        current_matchday=get_current_matchday(),
-        override_active=session.get("override_deadline", False),
-        season_started=season_clock_running(season)
+        "group_standings.html",
+        standings_data=standings_data,
+        top_scoring_team=top_scoring_team,
+        best_defense_team=best_defense_team,
+        season=season
     )
 
 
 # ==========================================================
-# BULK SCORE UPDATE
+# MATCH HISTORY
 # ==========================================================
 
-@admin.route("/bulk-update", methods=["POST"])
-@login_required
-def bulk_update():
+@main.route("/match-history")
+def match_history():
     season = get_active_season()
-    matches = Match.query.filter_by(season_id=season.id).all()
-    touched = []
-    rejected = []
+    if not season:
+        return render_template("match_history.html", matches=[])
 
-    for match in matches:
-        if is_match_locked(match):
-            continue
+    completed_matches = (
+        Match.query
+        .filter(Match.home_score.isnot(None), Match.season_id == season.id)
+        .order_by(Match.stage, Match.matchday, Match.id)
+        .all()
+    )
+    return render_template("match_history.html", matches=completed_matches, season=season)
 
-        home_score = request.form.get(f"home_{match.id}")
-        away_score = request.form.get(f"away_{match.id}")
 
-        if home_score != "" and away_score != "":
-            home_score = int(home_score)
-            away_score = int(away_score)
+# ==========================================================
+# TEAM STATS
+# ==========================================================
 
-            # ==========================================================
-            # KNOCKOUT DRAW PROTECTION (FIX)
-            # A knockout match (any stage other than "group") must never
-            # be saved as a scoreline draw. This prevents the system from
-            # ever silently deciding a winner on a tie (e.g. 1-1).
-            # ==========================================================
-            if match.stage != "group" and home_score == away_score:
-                rejected.append((match, home_score, away_score))
+@main.route("/team-stats")
+def team_stats():
+    season = get_active_season()
+    if not season:
+        return render_template("team_stats.html", most_goals=[], best_defense=[],
+                                most_wins=[], most_clean_sheets=[])
+
+    assignments = SeasonAssignment.query.filter_by(season_id=season.id).all()
+    stats = []
+
+    for assignment in assignments:
+        matches = Match.query.filter(
+            Match.season_id == season.id,
+            or_(
+                Match.home_assignment_id == assignment.id,
+                Match.away_assignment_id == assignment.id
+            )
+        ).all()
+
+        wins = goals_scored = goals_conceded = clean_sheets = 0
+        for m in matches:
+            if m.home_score is None:
                 continue
+            if m.home_assignment_id == assignment.id:
+                goals_scored += m.home_score; goals_conceded += m.away_score
+                if m.home_score > m.away_score: wins += 1
+                if m.away_score == 0: clean_sheets += 1
+            else:
+                goals_scored += m.away_score; goals_conceded += m.home_score
+                if m.away_score > m.home_score: wins += 1
+                if m.home_score == 0: clean_sheets += 1
 
-            match.home_score = home_score
-            match.away_score = away_score
-            match.is_completed = True
-            touched.append(match)
+        stats.append({
+            "assignment": assignment, "wins": wins,
+            "goals_scored": goals_scored, "goals_conceded": goals_conceded,
+            "clean_sheets": clean_sheets
+        })
 
+    return render_template(
+        "team_stats.html",
+        most_goals=sorted(stats, key=lambda x: x["goals_scored"], reverse=True),
+        best_defense=sorted(stats, key=lambda x: x["goals_conceded"]),
+        most_wins=sorted(stats, key=lambda x: x["wins"], reverse=True),
+        most_clean_sheets=sorted(stats, key=lambda x: x["clean_sheets"], reverse=True),
+        season=season
+    )
+
+
+# ==========================================================
+# PLAYER REGISTRY
+# ==========================================================
+
+@main.route("/players")
+def player_registry():
+    rows = AnalyticsService.get_career_leaderboard()
+    return render_template("player_registry.html", rows=rows)
+
+
+@main.route("/players/<player_code>")
+def player_profile(player_code):
+    player = Player.query.filter_by(player_code=player_code).first_or_404()
+    all_seasons = Season.query.order_by(Season.season_number).all()
+
+    history = []
+    for season in all_seasons:
+        assignment = SeasonAssignment.query.filter_by(
+            season_id=season.id, player_id=player.id
+        ).first()
+        history.append({
+            "season": season.name,
+            "club": assignment.team.name if assignment else "Did Not Participate"
+        })
+
+    from .services.elo_engine import EloEngine
+    career = EloEngine.get_career_rating(player.id)
+
+    return render_template(
+        "player_profile.html", player=player, history=history, career=career
+    )
+
+
+# ==========================================================
+# SETUP
+# ==========================================================
+
+@main.route("/setup")
+@login_required
+def setup():
+    season = get_active_season()
+    if not season:
+        return "❌ No active season. Create and activate one first."
+
+    if stage_exists("group", season.id):
+        return "❌ Groups already generated for this season."
+
+    assignments = SeasonAssignment.query.filter_by(season_id=season.id).all()
+    if len(assignments) < MIN_TEAMS_PER_SEASON:
+        return f"❌ Need at least {MIN_TEAMS_PER_SEASON} assigned teams. Currently: {len(assignments)}."
+
+    if not season.num_groups:
+        return "❌ Season config missing. Finalize team selection in admin first."
+
+    Group.query.filter_by(season_id=season.id).delete()
     db.session.commit()
 
-    for match in touched:
-        EloEngine.process_match(match)
+    group_names = [f"Group {chr(65+i)}" for i in range(season.num_groups)]
+    groups = []
+    for name in group_names:
+        g = Group(name=name, season_id=season.id)
+        db.session.add(g)
+        db.session.flush()
+        groups.append(g)
 
-    if rejected:
-        lines = []
-        for m, hs, aw in rejected:
-            lines.append(
-                f"{m.home_assignment.display_name} vs {m.away_assignment.display_name} "
-                f"({m.stage}) — {hs}-{aw}"
-            )
-        message = "<br>".join(lines)
-        return (
-            f"✅ {len(touched)} match(es) saved successfully.<br><br>"
-            f"❌ The following knockout match(es) were NOT saved because they ended in a draw. "
-            f"Knockout matches cannot end in a draw — please enter the actual decisive scoreline "
-            f"(e.g. after extra time):<br><br>{message}"
-            f"<br><br><a href='{url_for('admin.dashboard')}'>⬅ Back to Dashboard</a>"
-        )
+    assignment_ids = [a.id for a in assignments]
+    distributed = distribute_ids_into_groups(assignment_ids, season.num_groups)
 
-    return redirect(url_for("admin.dashboard"))
+    for group, id_list in zip(groups, distributed):
+        for assignment_id in id_list:
+            SeasonAssignment.query.get(assignment_id).group_id = group.id
+
+    db.session.commit()
+    return f"✅ {len(assignments)} teams split into {season.num_groups} groups!"
 
 
 # ==========================================================
-# DEADLINE OVERRIDE
+# GENERATE GROUP FIXTURES
 # ==========================================================
 
-@admin.route("/override-deadline", methods=["POST"])
+@main.route("/generate-group-fixtures")
 @login_required
-def override_deadline():
-    session["override_deadline"] = True
-    return redirect(url_for("admin.dashboard"))
-
-
-# ==========================================================
-# SEASON MANAGEMENT
-# ==========================================================
-
-@admin.route("/seasons")
-@login_required
-def list_seasons():
-    seasons = Season.query.order_by(Season.season_number.desc()).all()
-    return render_template("admin_seasons.html", seasons=seasons)
-
-
-@admin.route("/seasons/create", methods=["POST"])
-@login_required
-def create_season():
-    name = request.form.get("name")
-    SeasonManager.create_season(name)
-    return redirect(url_for("admin.list_seasons"))
-
-
-@admin.route("/seasons/<int:season_id>/activate")
-@login_required
-def activate_season(season_id):
-    SeasonManager.activate_season(season_id)
-    return redirect(url_for("admin.list_seasons"))
-
-
-@admin.route("/seasons/<int:season_id>/complete")
-@login_required
-def complete_season(season_id):
-    SeasonManager.complete_season(season_id)
-    return redirect(url_for("admin.list_seasons"))
-
-
-@admin.route("/seasons/<int:season_id>/start-clock", methods=["POST"])
-@login_required
-def start_season_clock(season_id):
-    mode = request.form.get("mode", "now")
-    start_at = next_10am_lagos() if mode == "next10" else now_lagos()
-    SeasonManager.start_season_clock(season_id, start_at=start_at)
-    return redirect(url_for("admin.dashboard"))
-
-
-@admin.route("/seasons/<int:season_id>/stop-clock", methods=["POST"])
-@login_required
-def stop_season_clock(season_id):
-    SeasonManager.stop_season_clock(season_id)
-    return redirect(url_for("admin.dashboard"))
-
-
-# ==========================================================
-# SEASON ASSIGNMENT SCREEN
-# ==========================================================
-
-@admin.route("/season-entries", methods=["GET", "POST"])
-@login_required
-def season_entries():
+def generate_group_fixtures():
     season = get_active_season()
     if not season:
         return "❌ No active season."
+    if stage_exists("group", season.id):
+        return "❌ Group fixtures already generated."
 
-    if request.method == "POST":
-        username = request.form.get("username", "").strip()
-        team_id = request.form.get("team_id")
-        try:
-            SeasonManager.assign_player_to_club(season.id, username, int(team_id))
-        except ValueError as e:
-            return f"❌ {e}"
-        return redirect(url_for("admin.season_entries"))
-
-    entries = SeasonAssignment.query.filter_by(season_id=season.id).all()
-    available_clubs = SeasonManager.get_unassigned_clubs(season.id)
-
-    suggested = None
-    if len(entries) >= MIN_TEAMS_PER_SEASON:
-        suggested = suggest_season_config(len(entries))
-
-    return render_template(
-        "admin_season_entries.html",
-        season=season, entries=entries,
-        available_clubs=available_clubs, suggested=suggested,
-        min_teams=MIN_TEAMS_PER_SEASON
-    )
-
-
-@admin.route("/season-entries/<int:assignment_id>/remove")
-@login_required
-def remove_season_entry(assignment_id):
-    SeasonManager.remove_assignment(assignment_id)
-    return redirect(url_for("admin.season_entries"))
-
-
-@admin.route("/season-entries/finalize", methods=["POST"])
-@login_required
-def finalize_season_entries():
-    season = get_active_season()
-    entries = SeasonAssignment.query.filter_by(season_id=season.id).all()
-
-    if len(entries) < MIN_TEAMS_PER_SEASON:
-        return f"❌ Need at least {MIN_TEAMS_PER_SEASON} teams assigned. Currently: {len(entries)}."
-
-    SeasonManager.finalize_season_config(season.id, len(entries))
-    return redirect(url_for("admin.dashboard"))
-
-
-# ==========================================================
-# HELPER: BUILD QUALIFIERS
-# ==========================================================
-
-def build_group_qualifiers():
-    season = get_active_season()
     groups = Group.query.filter_by(season_id=season.id).all()
 
-    qualified = []
-    leftovers = []
-    qualifiers_n = season.qualifiers_per_group or 3
-    wildcards_n = season.wildcard_slots or 0
-
     for group in groups:
-        table = []
-        for assignment in group.assignments:
-            points = gf = ga = 0
-            matches = Match.query.filter(
-                Match.stage == "group", Match.season_id == season.id,
-                or_(
-                    Match.home_assignment_id == assignment.id,
-                    Match.away_assignment_id == assignment.id
-                )
-            ).all()
+        assignment_ids = [a.id for a in group.assignments]
+        rounds = generate_round_robin(assignment_ids)
 
-            for m in matches:
-                if m.home_score is None:
-                    continue
-                if m.home_assignment_id == assignment.id:
-                    gf += m.home_score; ga += m.away_score
-                    if m.home_score > m.away_score: points += 3
-                    elif m.home_score == m.away_score: points += 1
-                else:
-                    gf += m.away_score; ga += m.home_score
-                    if m.away_score > m.home_score: points += 3
-                    elif m.away_score == m.home_score: points += 1
-
-            table.append({
-                "assignment": assignment, "group": group.name,
-                "points": points, "gd": gf - ga, "gf": gf
-            })
-
-        table.sort(key=lambda x: (x["points"], x["gd"], x["gf"]), reverse=True)
-        qualified.extend(table[:qualifiers_n])
-        leftovers.extend(table[qualifiers_n:])
-
-    if wildcards_n > 0 and leftovers:
-        leftovers.sort(key=lambda x: (x["points"], x["gd"], x["gf"]), reverse=True)
-        qualified.extend(leftovers[:wildcards_n])
-
-    return qualified
-
-
-# ==========================================================
-# ADMIN OVERVIEW
-# ==========================================================
-
-@admin.route("/overview")
-@login_required
-def overview():
-    context = {
-        "qualified_teams": build_group_qualifiers(),
-        "group_complete": stage_complete("group"),
-        "r16_exists": stage_exists("r16")
-    }
-    return render_template("overview.html", context=context)
-
-
-# ==========================================================
-# GENERATE R16
-# ==========================================================
-
-@admin.route("/generate-r16")
-@login_required
-def generate_r16():
-    season = get_active_season()
-
-    if stage_exists("r16", season.id):
-        return "❌ Round of 16 already generated."
-    if not stage_complete("group", season.id):
-        return "❌ Complete group stage first."
-
-    qualified = build_group_qualifiers()
-
-    bracket_size = len(qualified)
-    if bracket_size not in (4, 8, 16, 32):
-        return f"❌ {bracket_size} qualifiers is not a clean bracket size. Adjust qualifiers/wildcards in Season Entries."
-
-    random.shuffle(qualified)
-    pairings = []
-
-    while len(qualified) >= 2:
-        team1 = qualified.pop(0)
-        opponent_index = next(
-            (i for i, t in enumerate(qualified) if t["group"] != team1["group"]), 0
-        )
-        opponent = qualified.pop(opponent_index)
-        pairings.append((team1["assignment"], opponent["assignment"]))
-
-    for a1, a2 in pairings:
-        db.session.add(Match(
-            home_assignment_id=a1.id, away_assignment_id=a2.id,
-            stage="r16", matchday=1, is_completed=False, season_id=season.id
-        ))
+        for matchday_num, pairs in enumerate(rounds, start=1):
+            for home_id, away_id in pairs:
+                db.session.add(Match(
+                    home_assignment_id=home_id, away_assignment_id=away_id,
+                    stage="group", group_id=group.id,
+                    matchday=matchday_num, season_id=season.id
+                ))
+                db.session.add(Match(
+                    home_assignment_id=away_id, away_assignment_id=home_id,
+                    stage="group", group_id=group.id,
+                    matchday=matchday_num, season_id=season.id
+                ))
 
     db.session.commit()
-    return redirect(url_for("admin.dashboard"))
+    return "✅ Group Fixtures Generated!"
 
 
 # ==========================================================
-# GENERATE NEXT STAGE
+# PUBLIC STAGE ROUTES
 # ==========================================================
 
-def generate_next_stage(current_stage, next_stage, use_losers=False):
+@main.route("/r16")
+def r16():
     season = get_active_season()
-
-    if stage_exists(next_stage, season.id):
-        return f"❌ {next_stage} already generated."
-    if not stage_complete(current_stage, season.id):
-        return f"❌ Complete {current_stage} first."
-
-    matches = Match.query.filter_by(stage=current_stage, season_id=season.id).all()
-    advancing = []
-
-    for m in matches:
-        if m.home_score is None:
-            return f"❌ Some matches in {current_stage} are incomplete."
-
-        # ==========================================================
-        # KNOCKOUT DRAW PROTECTION (FIX - defensive safety net)
-        # This should never trigger if bulk_update() is working correctly,
-        # since draws can no longer be saved for knockout matches. This
-        # exists purely as a safeguard against legacy/edited data.
-        # ==========================================================
-        if m.home_score == m.away_score:
-            return (
-                f"❌ Match #{m.id} in {current_stage} "
-                f"({m.home_assignment.display_name} vs {m.away_assignment.display_name}) "
-                f"is a draw ({m.home_score}-{m.away_score}). Knockout matches cannot end in a draw. "
-                f"Please correct this result before generating {next_stage}."
-            )
-
-        if use_losers:
-            if m.home_score > m.away_score:
-                advancing.append(m.away_assignment_id)
-            else:
-                advancing.append(m.home_assignment_id)
-        else:
-            if m.home_score > m.away_score:
-                advancing.append(m.home_assignment_id)
-            else:
-                advancing.append(m.away_assignment_id)
-
-    if len(advancing) % 2 != 0:
-        return f"❌ Uneven {'losers' if use_losers else 'winners'} — cannot generate {next_stage}."
-
-    for i in range(0, len(advancing), 2):
-        db.session.add(Match(
-            home_assignment_id=advancing[i], away_assignment_id=advancing[i+1],
-            stage=next_stage, matchday=1, is_completed=False, season_id=season.id
-        ))
-
-    db.session.commit()
-    return redirect(url_for("admin.dashboard"))
+    matches = Match.query.filter_by(stage="r16", season_id=season.id).all() if season else []
+    return render_template("r16.html", matches=matches)
 
 
-@admin.route("/generate-quarter")
-@login_required
-def generate_quarter():
-    return generate_next_stage("r16", "quarter")
+@main.route("/quarterfinal")
+def quarterfinal():
+    season = get_active_season()
+    matches = Match.query.filter_by(stage="quarter", season_id=season.id).all() if season else []
+    return render_template("quarterfinal.html", matches=matches)
 
 
-@admin.route("/generate-semi")
-@login_required
-def generate_semi():
-    return generate_next_stage("quarter", "semi")
+@main.route("/semifinal")
+def semifinal():
+    season = get_active_season()
+    matches = Match.query.filter_by(stage="semi", season_id=season.id).all() if season else []
+    return render_template("knockout_stage.html", matches=matches)
 
 
-@admin.route("/generate-final")
-@login_required
-def generate_final():
-    return generate_next_stage("semi", "final", use_losers=False)
+@main.route("/third-place")
+def third_place():
+    season = get_active_season()
+    matches = Match.query.filter_by(stage="third", season_id=season.id).all() if season else []
+    return render_template("knockout_single.html", matches=matches)
 
 
-@admin.route("/generate-third")
-@login_required
-def generate_third():
-    return generate_next_stage("semi", "third", use_losers=True)
+@main.route("/final")
+def final():
+    season = get_active_season()
+    matches = Match.query.filter_by(stage="final", season_id=season.id).all() if season else []
+    return render_template("final_celebration.html", matches=matches)
+
+
+@main.route("/bracket")
+def bracket():
+    return render_template("bracket.html")
 
 
 # ==========================================================
-# AWARD TITLE
+# ANALYTICS
 # ==========================================================
 
-@admin.route("/award-title/<int:match_id>")
-@login_required
-def award_title(match_id):
-    match = Match.query.get_or_404(match_id)
-    if match.stage != "final" or match.home_score is None:
-        return "❌ Final not completed yet."
+@main.route("/analytics")
+def analytics():
+    rankings = AnalyticsService.get_power_rankings()
+    return render_template("analytics.html", rankings=rankings)
 
-    # ==========================================================
-    # KNOCKOUT DRAW PROTECTION (FIX)
-    # ==========================================================
-    if match.home_score == match.away_score:
-        return (
-            f"❌ The Final is a draw ({match.home_score}-{match.away_score}). "
-            f"A title cannot be awarded until a decisive result is entered."
-        )
 
-    winner_player = (
-        match.home_assignment.player if match.home_score > match.away_score
-        else match.away_assignment.player
+@main.route("/leaderboard")
+def leaderboard():
+    rows = AnalyticsService.get_career_leaderboard()
+    return render_template("leaderboard.html", rows=rows)
+
+
+# ==========================================================
+# PREDICT
+# ==========================================================
+
+@main.route("/predict", methods=["GET", "POST"])
+def predict():
+    season = get_active_season()
+    players = []
+    if season:
+        assigned_ids = [a.player_id for a in SeasonAssignment.query.filter_by(season_id=season.id).all()]
+        if assigned_ids:
+            players = Player.query.filter(Player.id.in_(assigned_ids)).all()
+
+    prediction = None
+    player_a = player_b = None
+
+    if request.method == "POST":
+        a_id = request.form.get("team_a")
+        b_id = request.form.get("team_b")
+        if a_id and b_id and a_id != b_id:
+            player_a = Player.query.get(int(a_id))
+            player_b = Player.query.get(int(b_id))
+            prediction = AnalyticsService.predict_match(player_a, player_b)
+
+    return render_template(
+        "predict.html", teams=players, prediction=prediction,
+        team_a=player_a, team_b=player_b
     )
-    winner_player.titles_won += 1
-    db.session.commit()
-    return f"🏆 Title awarded to {winner_player.username}!"
-
-
-# ==========================================================
-# RESET R16 + QUARTER
-# ==========================================================
-
-@admin.route("/reset-r16-and-quarter")
-@login_required
-def reset_r16_and_quarter():
-    season = get_active_season()
-    Match.query.filter_by(stage="quarter", season_id=season.id).delete()
-
-    r16_matches = Match.query.filter_by(stage="r16", season_id=season.id).all()
-    for match in r16_matches:
-        if match.elo_processed:
-            EloEngine.revert_match(match)
-        match.home_score = None
-        match.away_score = None
-        match.is_completed = False
-        match.elo_processed = False
-
-    db.session.commit()
-    return "✅ R16 and Quarterfinal successfully reset."
