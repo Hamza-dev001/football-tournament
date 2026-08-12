@@ -550,3 +550,53 @@ def dangerous_soft_reset(secret_key):
     except Exception as e:
         db.session.rollback()
         return f"❌ SOFT RESET FAILED: {str(e)}", 500
+
+
+# ==========================================================
+# TEMPORARY: WIPE SIMULATION PLAYERS + STATS — DELETE AFTER USE
+# ==========================================================
+
+@admin.route("/dangerous-wipe-simulation/<secret_key>")
+def dangerous_wipe_simulation(secret_key):
+    RESET_KEY = "Hamza123456"
+
+    if secret_key != RESET_KEY:
+        return "❌ Invalid key.", 403
+
+    from .models import Player, PlayerCareerRating, EloHistory
+
+    season = get_active_season()
+
+    try:
+        EloHistory.query.delete(synchronize_session=False)
+        Match.query.delete(synchronize_session=False)
+        PlayerSeasonRating.query.delete(synchronize_session=False)
+        PlayerCareerRating.query.delete(synchronize_session=False)
+        SeasonAssignment.query.delete(synchronize_session=False)
+        Group.query.delete(synchronize_session=False)
+        Player.query.delete(synchronize_session=False)
+
+        if season:
+            season.num_groups = None
+            season.qualifiers_per_group = 3
+            season.wildcard_slots = 1
+            season.started_at = None
+            season.is_completed = False
+            season.is_active = True
+
+        db.session.commit()
+        return (
+            "✅ SIMULATION WIPED<br><br>"
+            "• All fake matches deleted<br>"
+            "• All ELO history deleted<br>"
+            "• All player names removed<br>"
+            "• Career stats reset<br>"
+            "• Season 1 still exists, clock stopped<br>"
+            "• 20 clubs kept<br><br>"
+            "Go to Admin → Player Assignments and start fresh.<br>"
+            "<b>NOW DELETE THIS ROUTE AND REDEPLOY.</b>"
+        )
+
+    except Exception as e:
+        db.session.rollback()
+        return f"❌ WIPE FAILED: {str(e)}", 500
