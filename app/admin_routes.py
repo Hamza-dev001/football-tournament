@@ -1,4 +1,3 @@
-from .seed_teams import seed_teams
 from flask import Blueprint, render_template, redirect, url_for, request, session
 from flask_login import login_user, login_required, logout_user
 from sqlalchemy import or_
@@ -12,24 +11,28 @@ from .models import (
 from . import db
 from .routes import stage_exists, stage_complete
 from .services.elo_engine import EloEngine
-from .services.season_manager import SeasonManager
+from .services.season_manager import SeasonManager, now_lagos, next_10am_lagos
 from .services.season_setup import suggest_season_config, MIN_TEAMS_PER_SEASON
 
 admin = Blueprint("admin", __name__)
 
 
 # ==========================================================
-# MATCHDAY CALCULATION (per active season now, not hardcoded)
+# MATCHDAY / CLOCK
 # ==========================================================
+
+def season_clock_running(season=None):
+    season = season or get_active_season()
+    if not season or not season.started_at:
+        return False
+    return now_lagos() >= season.started_at
+
 
 def get_current_matchday():
     season = get_active_season()
-    if not season or not season.started_at:
+    if not season_clock_running(season):
         return 1
-    now = datetime.now()
-    if now < season.started_at:
-        return 1
-    diff = now - season.started_at
+    diff = now_lagos() - season.started_at
     return min(diff.days + 1, 3)
 
 
@@ -37,6 +40,8 @@ def is_match_locked(match):
     if session.get("override_deadline"):
         return False
     if match.stage != "group":
+        return False
+    if not season_clock_running():
         return False
 
     current_matchday = get_current_matchday()
@@ -95,12 +100,13 @@ def dashboard():
         data=data,
         season=season,
         current_matchday=get_current_matchday(),
-        override_active=session.get("override_deadline", False)
+        override_active=session.get("override_deadline", False),
+        season_started=season_clock_running(season)
     )
 
 
 # ==========================================================
-# BULK SCORE UPDATE — triggers dual ELO processing
+# BULK SCORE UPDATE
 # ==========================================================
 
 @admin.route("/bulk-update", methods=["POST"])
@@ -175,8 +181,24 @@ def complete_season(season_id):
     return redirect(url_for("admin.list_seasons"))
 
 
+@admin.route("/seasons/<int:season_id>/start-clock", methods=["POST"])
+@login_required
+def start_season_clock(season_id):
+    mode = request.form.get("mode", "now")
+    start_at = next_10am_lagos() if mode == "next10" else now_lagos()
+    SeasonManager.start_season_clock(season_id, start_at=start_at)
+    return redirect(url_for("admin.dashboard"))
+
+
+@admin.route("/seasons/<int:season_id>/stop-clock", methods=["POST"])
+@login_required
+def stop_season_clock(season_id):
+    SeasonManager.stop_season_clock(season_id)
+    return redirect(url_for("admin.dashboard"))
+
+
 # ==========================================================
-# SEASON ASSIGNMENT SCREEN — "assign username to club"
+# SEASON ASSIGNMENT SCREEN
 # ==========================================================
 
 @admin.route("/season-entries", methods=["GET", "POST"])
@@ -227,11 +249,11 @@ def finalize_season_entries():
         return f"❌ Need at least {MIN_TEAMS_PER_SEASON} teams assigned. Currently: {len(entries)}."
 
     SeasonManager.finalize_season_config(season.id, len(entries))
-    return redirect(url_for("admin.season_entries"))
+    return redirect(url_for("admin.dashboard"))
 
 
 # ==========================================================
-# HELPER: BUILD QUALIFIERS (TOP N + WILDCARDS)
+# HELPER: BUILD QUALIFIERS
 # ==========================================================
 
 def build_group_qualifiers():
@@ -340,8 +362,7 @@ def generate_r16():
 
 
 # ==========================================================
-# GENERATE NEXT STAGE (generic — quarter/semi/final/third)
-# Supports use_losers=True for Third Place playoff
+# GENERATE NEXT STAGE
 # ==========================================================
 
 def generate_next_stage(current_stage, next_stage, use_losers=False):
@@ -388,15 +409,18 @@ def generate_next_stage(current_stage, next_stage, use_losers=False):
 def generate_quarter():
     return generate_next_stage("r16", "quarter")
 
+
 @admin.route("/generate-semi")
 @login_required
 def generate_semi():
     return generate_next_stage("quarter", "semi")
 
+
 @admin.route("/generate-final")
 @login_required
 def generate_final():
     return generate_next_stage("semi", "final", use_losers=False)
+
 
 @admin.route("/generate-third")
 @login_required
@@ -405,7 +429,7 @@ def generate_third():
 
 
 # ==========================================================
-# AWARD TITLE (call after Final is scored)
+# AWARD TITLE
 # ==========================================================
 
 @admin.route("/award-title/<int:match_id>")
@@ -448,7 +472,7 @@ def reset_r16_and_quarter():
 
 
 # ==========================================================
-# TEMPORARY: RESET SEMI/FINAL/THIRD — DELETE AFTER USE
+# TEMPORARY RESETS
 # ==========================================================
 
 @admin.route("/reset-semi-onward/<secret_key>")
@@ -473,17 +497,13 @@ def reset_semi_onward(secret_key):
                 EloEngine.revert_match(m)
 
         match_ids = [m.id for m in matches]
-
-        # Delete EloHistory rows first — they reference these matches
         EloHistory.query.filter(EloHistory.match_id.in_(match_ids)).delete(synchronize_session=False)
 
-        # Now safe to delete Final and Third Place matches
         Match.query.filter(
             Match.season_id == season.id,
             Match.stage.in_(["final", "third"])
         ).delete(synchronize_session=False)
 
-        # Reset Semi matches to unplayed (don't delete them)
         semi_matches = Match.query.filter_by(stage="semi", season_id=season.id).all()
         for m in semi_matches:
             m.home_score = None
@@ -498,10 +518,6 @@ def reset_semi_onward(secret_key):
         db.session.rollback()
         return f"❌ RESET FAILED: {str(e)}", 500
 
-
-# ==========================================================
-# TEMPORARY: SOFT RESET FULL SEASON — DELETE AFTER USE
-# ==========================================================
 
 @admin.route("/dangerous-soft-reset/<secret_key>")
 def dangerous_soft_reset(secret_key):
@@ -526,6 +542,7 @@ def dangerous_soft_reset(secret_key):
         season.num_groups = None
         season.qualifiers_per_group = 3
         season.wildcard_slots = 1
+        season.started_at = None
 
         db.session.commit()
         return "✅ SOFT RESET COMPLETE — Season cleared. Player registry untouched."

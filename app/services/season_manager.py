@@ -1,7 +1,24 @@
-from datetime import datetime
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+
 from .. import db
 from ..models import Season, Team, Player, SeasonAssignment, PlayerSeasonRating
 from .player_registry import get_or_create_player
+from .season_setup import suggest_season_config
+
+LAGOS = ZoneInfo("Africa/Lagos")
+
+
+def now_lagos():
+    return datetime.now(LAGOS).replace(tzinfo=None)
+
+
+def next_10am_lagos():
+    now = now_lagos()
+    start = now.replace(hour=10, minute=0, second=0, microsecond=0)
+    if now >= start:
+        start += timedelta(days=1)
+    return start
 
 
 class SeasonManager:
@@ -20,7 +37,20 @@ class SeasonManager:
         Season.query.update({Season.is_active: False})
         season = Season.query.get_or_404(season_id)
         season.is_active = True
-        season.started_at = datetime.utcnow()
+        db.session.commit()
+        return season
+
+    @staticmethod
+    def start_season_clock(season_id, start_at=None):
+        season = Season.query.get_or_404(season_id)
+        season.started_at = start_at or now_lagos()
+        db.session.commit()
+        return season
+
+    @staticmethod
+    def stop_season_clock(season_id):
+        season = Season.query.get_or_404(season_id)
+        season.started_at = None
         db.session.commit()
         return season
 
@@ -29,8 +59,7 @@ class SeasonManager:
         season = Season.query.get_or_404(season_id)
         season.is_completed = True
         season.is_active = False
-        season.completed_at = datetime.utcnow()
-
+        season.completed_at = now_lagos()
         SeasonManager.mark_inactive_players(season_id)
         db.session.commit()
         return season
@@ -71,11 +100,13 @@ class SeasonManager:
     @staticmethod
     def get_unassigned_clubs(season_id):
         taken_ids = [a.team_id for a in SeasonAssignment.query.filter_by(season_id=season_id).all()]
-        return Team.query.filter(~Team.id.in_(taken_ids), Team.is_active == True).order_by(Team.name).all()
+        query = Team.query.filter(Team.is_active == True)
+        if taken_ids:
+            query = query.filter(~Team.id.in_(taken_ids))
+        return query.order_by(Team.name).all()
 
     @staticmethod
     def finalize_season_config(season_id, team_count):
-        from .season_setup import suggest_season_config
         season = Season.query.get_or_404(season_id)
         config = suggest_season_config(team_count)
         season.num_groups = config["num_groups"]

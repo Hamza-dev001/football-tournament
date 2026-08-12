@@ -1,84 +1,131 @@
 {% extends "base.html" %}
 {% block content %}
 
+<style>
+  .admin-panel {
+    background: #0d0d14;
+    border: 2px solid #0ff;
+    border-radius: 12px;
+    box-shadow: 0 0 15px rgba(0,255,255,0.35);
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  .admin-panel h3 {
+    color: #ffd700;
+    margin-top: 0;
+    margin-bottom: 16px;
+  }
+  .admin-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+  }
+  .admin-tile {
+    display: block;
+    text-align: center;
+    padding: 14px 10px;
+    border: 2px solid #0ff;
+    border-radius: 10px;
+    color: #0ff;
+    text-decoration: none;
+    font-weight: bold;
+  }
+  .admin-tile:hover {
+    background: rgba(0,255,255,0.12);
+    color: #0ff;
+  }
+  .setup-btn { margin: 6px 8px 6px 0; }
+</style>
+
 <h2 class="mb-4">⚙ Admin Dashboard</h2>
 
-<!-- ✅ DASHBOARD ACTIONS GRID -->
-<div class="row mb-4 g-3">
-    <!-- 1. Player Management (Added here) -->
-    <div class="col-md-6 col-lg-4">
-        <a href="{{ url_for('admin.season_entries') }}" class="btn btn-warning w-100 h-100 text-dark fw-bold p-4 d-flex flex-column justify-content-center align-items-center rounded shadow border-2 border-warning">
-            <span style="font-size: 2rem;">👥</span>
-            <span>Manage Players & Roster</span>
-            <small class="text-muted mt-2">Assign users to clubs for Season 1</small>
-        </a>
-    </div>
-
-    <!-- 2. Tournament Stage Control -->
-    <div class="col-md-6 col-lg-4">
-        <a href="{{ url_for('admin.overview') }}" class="btn btn-primary w-100 h-100 fw-bold p-4 d-flex flex-column justify-content-center align-items-center rounded shadow">
-            <span style="font-size: 2rem;">🏆</span>
-            <span>Tournament Stage Control</span>
-            <small class="text-white-50 mt-2">Generate brackets, reset stages</small>
-        </a>
-    </div>
-
-    <!-- 3. Season Settings (Optional placeholder for future features or just info) -->
-    <div class="col-md-6 col-lg-4">
-        <div class="card bg-dark text-white h-100 border-secondary p-4 d-flex flex-column justify-content-center align-items-center">
-            <span style="font-size: 2rem;">📅</span>
-            <strong>Current Matchday</strong>
-            <h2 class="mt-1">{{ current_matchday }}</h2>
-        </div>
-    </div>
+<div class="admin-panel">
+  <h3>⚙️ Admin Control Panel</h3>
+  <div class="admin-grid">
+    <a class="admin-tile" href="{{ url_for('admin.season_entries') }}">👥 Player Assignments</a>
+    <a class="admin-tile" href="{{ url_for('admin.overview') }}">🏆 Stage Control</a>
+    <a class="admin-tile" href="{{ url_for('admin.list_seasons') }}">📅 Seasons</a>
+    <a class="admin-tile" href="{{ url_for('main.player_registry') }}">📋 Player Registry</a>
+  </div>
 </div>
 
-<!-- ✅ CURRENT MATCHDAY DISPLAY -->
-<div class="alert alert-info mb-3">
+<div class="admin-panel">
+  <h3>🕒 Season Clock</h3>
+  {% if season and season.started_at %}
+    <p>Clock is set for: <strong>{{ season.started_at }}</strong> (Africa/Lagos)</p>
+    <form method="POST" action="{{ url_for('admin.stop_season_clock', season_id=season.id) }}" class="d-inline">
+      <button type="submit" class="btn btn-danger setup-btn"
+              onclick="return confirm('Stop the matchday clock? Countdown will freeze until you start it again.')">
+        ⏹ Stop Season Clock
+      </button>
+    </form>
+  {% elif season %}
+    <p>The matchday countdown will <strong>not</strong> run until you start the clock.</p>
+    <form method="POST" action="{{ url_for('admin.start_season_clock', season_id=season.id) }}" class="d-inline">
+      <input type="hidden" name="mode" value="now">
+      <button type="submit" class="btn btn-success setup-btn">▶ Start Clock Now</button>
+    </form>
+    <form method="POST" action="{{ url_for('admin.start_season_clock', season_id=season.id) }}" class="d-inline">
+      <input type="hidden" name="mode" value="next10">
+      <button type="submit" class="btn btn-warning setup-btn">🕙 Start at Next 10:00 AM</button>
+    </form>
+  {% else %}
+    <p>No active season.</p>
+  {% endif %}
+</div>
+
+<div class="admin-panel">
+  <h3>🛠 Configure Season</h3>
+  <p class="text-muted mb-3">
+    Use this after assigning players. This creates groups and match tables.
+  </p>
+
+  <form method="POST" action="{{ url_for('admin.finalize_season_entries') }}" class="d-inline">
+    <button type="submit" class="btn btn-warning setup-btn">✔ Confirm Roster & Lock Config</button>
+  </form>
+
+  <a href="{{ url_for('main.setup') }}" class="btn btn-info setup-btn">1️⃣ Generate Groups</a>
+  <a href="{{ url_for('main.generate_group_fixtures') }}" class="btn btn-primary setup-btn">2️⃣ Generate Fixtures</a>
+  <a href="{{ url_for('admin.overview') }}" class="btn btn-secondary setup-btn">3️⃣ Stage Control</a>
+</div>
+
+<div class="alert alert-info">
     📅 Current Matchday: <strong>{{ current_matchday }}</strong>
+    {% if season %} | Season: <strong>{{ season.name }}</strong>{% endif %}
+    {% if not season_started %} | ⏸ Clock not running{% endif %}
 </div>
 
-<!-- ✅ OVERRIDE STATUS -->
 {% if override_active %}
 <div class="alert alert-warning">
     👑 Deadline Override is ACTIVE
 </div>
 {% endif %}
 
-<!-- ✅ OVERRIDE BUTTON -->
-<form method="POST" action="{{ url_for('admin.override_deadline') }}" class="mb-4">
-    <button type="submit" class="btn btn-danger">
-        ⚠ Override Deadline (Admin Only)
-    </button>
+<form method="POST" action="{{ url_for('admin.override_deadline') }}" class="mb-3">
+    <button type="submit" class="btn btn-danger">⚠ Override Deadline (Admin Only)</button>
 </form>
 
-<hr class="border-secondary my-5">
-
-<!-- ✅ SCORE UPDATE FORM -->
-<h4 class="mb-3 text-info">Update Scores</h4>
 <form method="POST" action="{{ url_for('admin.bulk_update') }}">
 
     {% for stage, matches in data.items() %}
-
         {% if matches %}
         <div class="card bg-dark text-white mb-4 p-3">
-            <h4 class="border-bottom pb-2 mb-3">{{ stage|upper }}</h4>
+            <h4>{{ stage|upper }}</h4>
 
             {% for match in matches %}
+                {% set locked = (match.stage == 'group' and match.matchday != current_matchday and not override_active and season_started) %}
 
-                {% set locked = (match.stage == 'group' and match.matchday != current_matchday and not override_active) %}
-
-                <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded
-                    {% if locked %}bg-secondary opacity-75 border border-danger{% endif %}">
+                <div class="d-flex justify-content-between align-items-center mb-2 p-2
+                    {% if locked %}bg-secondary border border-danger{% endif %}">
 
                     <strong style="width:30%;">
-                        {{ match.home_team.name }}
+                        {{ match.home_assignment.display_name }}
                     </strong>
 
                     <input type="number"
                            name="home_{{ match.id }}"
                            value="{{ match.home_score if match.home_score is not none else '' }}"
-                           class="form-control text-center form-control-sm"
+                           class="form-control text-center"
                            style="width:80px;"
                            {% if locked %}disabled{% endif %}>
 
@@ -87,30 +134,25 @@
                     <input type="number"
                            name="away_{{ match.id }}"
                            value="{{ match.away_score if match.away_score is not none else '' }}"
-                           class="form-control text-center form-control-sm"
+                           class="form-control text-center"
                            style="width:80px;"
                            {% if locked %}disabled{% endif %}>
 
                     <strong style="width:30%; text-align:right;">
-                        {{ match.away_team.name }}
+                        {{ match.away_assignment.display_name }}
                     </strong>
 
                     {% if locked %}
-                        <span class="text-danger ms-2 small">🔒 LOCKED</span>
+                        <span class="text-danger ms-2">🔒 LOCKED</span>
                     {% endif %}
 
                 </div>
-
             {% endfor %}
         </div>
         {% endif %}
-
     {% endfor %}
 
-    <button type="submit" class="btn btn-success btn-lg w-100">
-        ✅ Save All Scores
-    </button>
-
+    <button type="submit" class="btn btn-success">✅ Save All Scores</button>
 </form>
 
 {% endblock %}

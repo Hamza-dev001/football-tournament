@@ -1,4 +1,4 @@
-import random
+from datetime import timedelta
 from flask import Blueprint, render_template, request
 from flask_login import login_required
 from sqlalchemy import or_
@@ -12,12 +12,13 @@ from .services.analytics_service import AnalyticsService
 from .services.season_setup import (
     distribute_ids_into_groups, generate_round_robin, MIN_TEAMS_PER_SEASON
 )
+from .services.season_manager import now_lagos
 
 main = Blueprint("main", __name__)
 
 
 # ==========================================================
-# STAGE UTILITIES (season-scoped)
+# STAGE UTILITIES
 # ==========================================================
 
 def stage_exists(stage_name, season_id=None):
@@ -26,6 +27,7 @@ def stage_exists(stage_name, season_id=None):
     if not season_id:
         return False
     return Match.query.filter_by(stage=stage_name, season_id=season_id).count() > 0
+
 
 def stage_complete(stage_name, season_id=None):
     season = get_active_season()
@@ -36,6 +38,7 @@ def stage_complete(stage_name, season_id=None):
     if not matches:
         return False
     return all(m.is_completed for m in matches)
+
 
 def tournament_finished():
     return stage_complete("final")
@@ -49,6 +52,10 @@ def tournament_finished():
 def inject_stage_status():
     season = get_active_season()
 
+    season_started = False
+    countdown_label = "Season has not started"
+    countdown_target = ""
+
     if not season:
         return {
             "r16_exists": False, "quarter_exists": False, "semi_exists": False,
@@ -56,8 +63,23 @@ def inject_stage_status():
             "current_stage": "⚪ No Active Season", "remaining_group_matches": 0,
             "group_stage_complete": False, "group_done": False, "r16_done": False,
             "quarter_done": False, "semi_done": False, "final_done": False,
-            "active_season": None
+            "active_season": None,
+            "season_started": False,
+            "countdown_label": countdown_label,
+            "countdown_target": countdown_target
         }
+
+    if season.started_at:
+        now = now_lagos()
+        if now < season.started_at:
+            countdown_target = season.started_at.isoformat()
+            countdown_label = "Season starts in"
+            season_started = False
+        else:
+            season_started = True
+            matchday = min((now - season.started_at).days + 1, 3)
+            countdown_target = (season.started_at + timedelta(days=matchday)).isoformat()
+            countdown_label = f"Matchday {matchday} ends in"
 
     if stage_exists("final") and stage_complete("final"):
         current_stage = "🏆 Tournament Completed"
@@ -89,7 +111,10 @@ def inject_stage_status():
         "quarter_done": stage_complete("quarter"),
         "semi_done": stage_complete("semi"),
         "final_done": stage_complete("final"),
-        "active_season": season
+        "active_season": season,
+        "season_started": season_started,
+        "countdown_label": countdown_label,
+        "countdown_target": countdown_target
     }
 
 
@@ -245,7 +270,7 @@ def match_history():
 
 
 # ==========================================================
-# TEAM (CLUB) STATS — this season's club performance
+# TEAM STATS
 # ==========================================================
 
 @main.route("/team-stats")
@@ -297,12 +322,11 @@ def team_stats():
 
 
 # ==========================================================
-# PLAYER REGISTRY (permanent identities)
+# PLAYER REGISTRY
 # ==========================================================
 
 @main.route("/players")
 def player_registry():
-    from .services.analytics_service import AnalyticsService
     rows = AnalyticsService.get_career_leaderboard()
     return render_template("player_registry.html", rows=rows)
 
@@ -331,7 +355,7 @@ def player_profile(player_code):
 
 
 # ==========================================================
-# SETUP (builds groups from THIS season's SeasonAssignments)
+# SETUP
 # ==========================================================
 
 @main.route("/setup")
@@ -419,11 +443,13 @@ def r16():
     matches = Match.query.filter_by(stage="r16", season_id=season.id).all() if season else []
     return render_template("r16.html", matches=matches)
 
+
 @main.route("/quarterfinal")
 def quarterfinal():
     season = get_active_season()
     matches = Match.query.filter_by(stage="quarter", season_id=season.id).all() if season else []
     return render_template("quarterfinal.html", matches=matches)
+
 
 @main.route("/semifinal")
 def semifinal():
@@ -431,17 +457,20 @@ def semifinal():
     matches = Match.query.filter_by(stage="semi", season_id=season.id).all() if season else []
     return render_template("knockout_stage.html", matches=matches)
 
+
 @main.route("/third-place")
 def third_place():
     season = get_active_season()
     matches = Match.query.filter_by(stage="third", season_id=season.id).all() if season else []
     return render_template("knockout_single.html", matches=matches)
 
+
 @main.route("/final")
 def final():
     season = get_active_season()
     matches = Match.query.filter_by(stage="final", season_id=season.id).all() if season else []
     return render_template("final_celebration.html", matches=matches)
+
 
 @main.route("/bracket")
 def bracket():
@@ -474,7 +503,8 @@ def predict():
     players = []
     if season:
         assigned_ids = [a.player_id for a in SeasonAssignment.query.filter_by(season_id=season.id).all()]
-        players = Player.query.filter(Player.id.in_(assigned_ids)).all()
+        if assigned_ids:
+            players = Player.query.filter(Player.id.in_(assigned_ids)).all()
 
     prediction = None
     player_a = player_b = None
