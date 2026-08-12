@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+  .profile-wrap { max-width: 800px; margin: 0 auto; }
+  .neon-panel {
+    background: #0d0d14;
+    border: 2px solid #0ff;
+    border-radius: 12px;
+    box-shadow: 0 0 15px rgba(0,255,255,0.35);
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .neon-title { color: #ffd700; text-shadow: 0 0 10px rgba(255,215,0,0.6); margin-top: 0; }
+  .stat { color: #0ff; margin: 6px 0; }
+  .history-row {
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(0,255,255,0.15);
+  }
+  .dnp { color: #888; }
+  .hint { color: #888; }
+</style>
+
+<div class="profile-wrap">
+
+  <div class="neon-panel">
+    <h2 class="neon-title">{{ player.username }}</h2>
+    <p class="hint">{{ player.player_code }} · {{ player.status }}</p>
+  </div>
+
+  <div class="neon-panel">
+    <h3 class="neon-title">Career Record</h3>
+    <p class="stat">Starting ELO: {{ career.starting_elo }}</p>
+    <p class="stat">Current ELO: {{ career.current_elo }}</p>
+    <p class="stat">Peak ELO: {{ career.peak_elo }}</p>
+    <p class="stat">Matches: {{ career.matches_played }}</p>
+    <p class="stat">W-D-L: {{ career.wins }}-{{ career.draws }}-{{ career.losses }}</p>
+    <p class="stat">Goals: {{ career.goals_scored }} scored / {{ career.goals_conceded }} conceded</p>
+    <p class="stat">Titles: {{ player.titles_won }}</p>
+  </div>
+
+  <div class="neon-panel">
+    <h3 class="neon-title">Season History</h3>
+    {% for row in history %}
+      <div class="history-row">
+        <strong>{{ row.season }}</strong> —
+        {% if row.club == "Did Not Participate" %}
+          <span class="dnp">Did Not Participate</span>
+        {% else %}
+          {{ row.club }}
+        {% endif %}
+      </div>
+    {% else %}
+      <p class="hint">No season history yet.</p>
+    {% endfor %}
+  </div>
+
+</div>
+
+{% endblock %}

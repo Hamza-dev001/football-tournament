@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+  .reg-wrap { max-width: 1000px; margin: 0 auto; }
+  .neon-panel {
+    background: #0d0d14;
+    border: 2px solid #0ff;
+    border-radius: 12px;
+    box-shadow: 0 0 15px rgba(0,255,255,0.35);
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .neon-title { color: #ffd700; text-shadow: 0 0 10px rgba(255,215,0,0.6); margin-top: 0; }
+  table { width: 100%; border-collapse: collapse; color: #eee; }
+  th, td { padding: 10px 8px; border-bottom: 1px solid rgba(0,255,255,0.15); text-align: left; }
+  th { color: #0ff; }
+  a.player-link { color: #ffd700; text-decoration: none; font-weight: bold; }
+  a.player-link:hover { text-shadow: 0 0 8px #ffd700; }
+  .status-active { color: #00ff88; font-weight: bold; }
+  .status-inactive { color: #888; }
+  .hint { color: #888; }
+</style>
+
+<div class="reg-wrap">
+  <div class="neon-panel">
+    <h2 class="neon-title">📋 Player Registry</h2>
+    <p class="hint">Permanent player identities. ELO belongs to the player, not the club.</p>
+  </div>
+
+  <div class="neon-panel">
+    {% if rows %}
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Username</th>
+          <th>Status</th>
+          <th>Career ELO</th>
+          <th>Peak</th>
+          <th>W-D-L</th>
+          <th>Titles</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td>{{ row.player.player_code }}</td>
+          <td>
+            <a class="player-link" href="{{ url_for('main.player_profile', player_code=row.player.player_code) }}">
+              {{ row.player.username }}
+            </a>
+          </td>
+          <td>
+            {% if row.status == "ACTIVE" %}
+              <span class="status-active">ACTIVE</span>
+            {% else %}
+              <span class="status-inactive">{{ row.status }}</span>
+            {% endif %}
+          </td>
+          <td>{{ row.elo }}</td>
+          <td>{{ row.peak_elo }}</td>
+          <td>{{ row.wins }}-{{ row.draws }}-{{ row.losses }}</td>
+          <td>{{ row.titles }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <p class="hint">No players registered yet. Assign a username to a club first.</p>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

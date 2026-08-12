@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+  .seasons-wrap { max-width: 900px; margin: 0 auto; }
+  .neon-panel {
+    background: #0d0d14;
+    border: 2px solid #0ff;
+    border-radius: 12px;
+    box-shadow: 0 0 15px rgba(0,255,255,0.35);
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .neon-title { color: #ffd700; text-shadow: 0 0 10px rgba(255,215,0,0.6); margin-top: 0; }
+  .neon-input {
+    width: 100%; padding: 10px; background: #000; color: #0ff;
+    border: 1px solid #0ff; border-radius: 6px; font-size: 16px;
+  }
+  .btn-neon {
+    display: inline-block; margin-top: 12px; padding: 10px 22px;
+    background: transparent; color: #0ff; border: 2px solid #0ff;
+    border-radius: 8px; font-weight: bold; cursor: pointer;
+    text-decoration: none;
+  }
+  .btn-neon:hover { background: rgba(0,255,255,0.12); color: #0ff; }
+  .btn-gold { border-color: #ffd700; color: #ffd700; }
+  .btn-gold:hover { background: rgba(255,215,0,0.12); color: #ffd700; }
+  .btn-danger-outline { border-color: #ff5555; color: #ff5555; }
+  .btn-danger-outline:hover { background: rgba(255,85,85,0.12); color: #ff5555; }
+  .season-row {
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 10px;
+    padding: 14px; margin: 10px 0;
+    background: #11111c; border: 1px solid rgba(0,255,255,0.2); border-radius: 8px;
+  }
+  .badge-active { color: #00ff88; font-weight: bold; }
+  .badge-done { color: #888; }
+  .badge-draft { color: #ffc107; }
+  .hint { color: #888; font-size: 14px; }
+</style>
+
+<div class="seasons-wrap">
+
+  <div class="neon-panel">
+    <h2 class="neon-title">📅 Season Manager</h2>
+    <p class="hint">Create a new season, activate it, then go to Player Assignments to pick clubs and players.</p>
+  </div>
+
+  <div class="neon-panel">
+    <h3 class="neon-title">Create New Season</h3>
+    <form method="POST" action="{{ url_for('admin.create_season') }}">
+      <input class="neon-input" type="text" name="name" placeholder="e.g. Season 2" required>
+      <button type="submit" class="btn-neon">Create Season</button>
+    </form>
+  </div>
+
+  <div class="neon-panel">
+    <h3 class="neon-title">All Seasons</h3>
+
+    {% if seasons %}
+      {% for s in seasons %}
+        <div class="season-row">
+          <div>
+            <strong>{{ s.name }}</strong>
+            <span class="hint">(#{{ s.season_number }})</span>
+            <br>
+            {% if s.is_active %}
+              <span class="badge-active">● ACTIVE</span>
+            {% elif s.is_completed %}
+              <span class="badge-done">● COMPLETED</span>
+            {% else %}
+              <span class="badge-draft">● DRAFT</span>
+            {% endif %}
+          </div>
+
+          <div>
+            {% if not s.is_active and not s.is_completed %}
+              <a class="btn-neon btn-gold"
+                 href="{{ url_for('admin.activate_season', season_id=s.id) }}"
+                 onclick="return confirm('Activate {{ s.name }}? This will deactivate any other active season.')">
+                Activate
+              </a>
+            {% endif %}
+
+            {% if s.is_active and not s.is_completed %}
+              <a class="btn-neon btn-danger-outline"
+                 href="{{ url_for('admin.complete_season', season_id=s.id) }}"
+                 onclick="return confirm('Complete {{ s.name }}? Players not in this season will be marked INACTIVE.')">
+                Complete Season
+              </a>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p class="hint">No seasons yet.</p>
+    {% endif %}
+  </div>
+
+</div>
+
+{% endblock %}
