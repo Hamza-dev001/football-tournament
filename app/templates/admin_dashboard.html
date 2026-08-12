@@ -3,16 +3,39 @@
 
 <h2 class="mb-4">⚙ Admin Dashboard</h2>
 
-<!-- ✅ CURRENT MATCHDAY DISPLAY -->
-<div class="alert alert-info">
-    📅 Current Matchday: <strong>{{ current_matchday }}</strong>
+<!-- ✅ DASHBOARD ACTIONS GRID -->
+<div class="row mb-4 g-3">
+    <!-- 1. Player Management (Added here) -->
+    <div class="col-md-6 col-lg-4">
+        <a href="{{ url_for('admin.season_entries') }}" class="btn btn-warning w-100 h-100 text-dark fw-bold p-4 d-flex flex-column justify-content-center align-items-center rounded shadow border-2 border-warning">
+            <span style="font-size: 2rem;">👥</span>
+            <span>Manage Players & Roster</span>
+            <small class="text-muted mt-2">Assign users to clubs for Season 1</small>
+        </a>
+    </div>
+
+    <!-- 2. Tournament Stage Control -->
+    <div class="col-md-6 col-lg-4">
+        <a href="{{ url_for('admin.overview') }}" class="btn btn-primary w-100 h-100 fw-bold p-4 d-flex flex-column justify-content-center align-items-center rounded shadow">
+            <span style="font-size: 2rem;">🏆</span>
+            <span>Tournament Stage Control</span>
+            <small class="text-white-50 mt-2">Generate brackets, reset stages</small>
+        </a>
+    </div>
+
+    <!-- 3. Season Settings (Optional placeholder for future features or just info) -->
+    <div class="col-md-6 col-lg-4">
+        <div class="card bg-dark text-white h-100 border-secondary p-4 d-flex flex-column justify-content-center align-items-center">
+            <span style="font-size: 2rem;">📅</span>
+            <strong>Current Matchday</strong>
+            <h2 class="mt-1">{{ current_matchday }}</h2>
+        </div>
+    </div>
 </div>
 
-<!-- ✅ TOURNAMENT STAGE CONTROL BUTTON -->
-<div class="mb-3">
-    <a href="{{ url_for('admin.overview') }}" class="btn btn-primary">
-        🏆 Tournament Stage Control
-    </a>
+<!-- ✅ CURRENT MATCHDAY DISPLAY -->
+<div class="alert alert-info mb-3">
+    📅 Current Matchday: <strong>{{ current_matchday }}</strong>
 </div>
 
 <!-- ✅ OVERRIDE STATUS -->
@@ -23,27 +46,30 @@
 {% endif %}
 
 <!-- ✅ OVERRIDE BUTTON -->
-<form method="POST" action="{{ url_for('admin.override_deadline') }}" class="mb-3">
+<form method="POST" action="{{ url_for('admin.override_deadline') }}" class="mb-4">
     <button type="submit" class="btn btn-danger">
         ⚠ Override Deadline (Admin Only)
     </button>
 </form>
 
+<hr class="border-secondary my-5">
+
 <!-- ✅ SCORE UPDATE FORM -->
+<h4 class="mb-3 text-info">Update Scores</h4>
 <form method="POST" action="{{ url_for('admin.bulk_update') }}">
 
     {% for stage, matches in data.items() %}
 
         {% if matches %}
         <div class="card bg-dark text-white mb-4 p-3">
-            <h4>{{ stage|upper }}</h4>
+            <h4 class="border-bottom pb-2 mb-3">{{ stage|upper }}</h4>
 
             {% for match in matches %}
 
                 {% set locked = (match.stage == 'group' and match.matchday != current_matchday and not override_active) %}
 
-                <div class="d-flex justify-content-between align-items-center mb-2 p-2
-                    {% if locked %}bg-secondary border border-danger{% endif %}">
+                <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded
+                    {% if locked %}bg-secondary opacity-75 border border-danger{% endif %}">
 
                     <strong style="width:30%;">
                         {{ match.home_team.name }}
@@ -52,7 +78,7 @@
                     <input type="number"
                            name="home_{{ match.id }}"
                            value="{{ match.home_score if match.home_score is not none else '' }}"
-                           class="form-control text-center"
+                           class="form-control text-center form-control-sm"
                            style="width:80px;"
                            {% if locked %}disabled{% endif %}>
 
@@ -61,7 +87,7 @@
                     <input type="number"
                            name="away_{{ match.id }}"
                            value="{{ match.away_score if match.away_score is not none else '' }}"
-                           class="form-control text-center"
+                           class="form-control text-center form-control-sm"
                            style="width:80px;"
                            {% if locked %}disabled{% endif %}>
 
@@ -70,7 +96,7 @@
                     </strong>
 
                     {% if locked %}
-                        <span class="text-danger ms-2">🔒 LOCKED</span>
+                        <span class="text-danger ms-2 small">🔒 LOCKED</span>
                     {% endif %}
 
                 </div>
@@ -81,7 +107,7 @@
 
     {% endfor %}
 
-    <button type="submit" class="btn btn-success">
+    <button type="submit" class="btn btn-success btn-lg w-100">
         ✅ Save All Scores
     </button>
 
