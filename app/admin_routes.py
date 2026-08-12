@@ -519,9 +519,9 @@ def dangerous_soft_reset(secret_key):
         EloHistory.query.filter(EloHistory.match_id.in_(match_ids)).delete(synchronize_session=False)
 
         Match.query.filter_by(season_id=season.id).delete()
-        Group.query.filter_by(season_id=season.id).delete()
-        SeasonAssignment.query.filter_by(season_id=season.id).delete()
         PlayerSeasonRating.query.filter_by(season_id=season.id).delete()
+        SeasonAssignment.query.filter_by(season_id=season.id).delete()
+        Group.query.filter_by(season_id=season.id).delete()
 
         season.num_groups = None
         season.qualifiers_per_group = 3
