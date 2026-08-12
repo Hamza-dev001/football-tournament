@@ -7,15 +7,15 @@
 
     <select name="team_a" class="form-select mb-2" required>
         <option value="">Select Team A</option>
-        {% for team in teams %}
-            <option value="{{ team.id }}">{{ team.name }}</option>
+        {% for player in teams %}
+            <option value="{{ player.id }}">{{ player.username }} ({{ player.player_code }})</option>
         {% endfor %}
     </select>
 
     <select name="team_b" class="form-select mb-2" required>
         <option value="">Select Team B</option>
-        {% for team in teams %}
-            <option value="{{ team.id }}">{{ team.name }}</option>
+        {% for player in teams %}
+            <option value="{{ player.id }}">{{ player.username }} ({{ player.player_code }})</option>
         {% endfor %}
     </select>
 
@@ -29,11 +29,11 @@
 
 <div class="card p-4 bg-dark text-white">
 
-    <h4>{{ team_a.name }} vs {{ team_b.name }}</h4>
+    <h4>{{ team_a.username }} vs {{ team_b.username }}</h4>
 
     <p>
-        🔵 {{ team_a.name }} Win Probability: <strong>{{ prediction.team_a_prob }}%</strong><br>
-        🔴 {{ team_b.name }} Win Probability: <strong>{{ prediction.team_b_prob }}%</strong>
+        🔵 {{ team_a.username }} Win Probability: <strong>{{ prediction.team_a_prob }}%</strong><br>
+        🔴 {{ team_b.username }} Win Probability: <strong>{{ prediction.team_b_prob }}%</strong>
     </p>
 
     <div style="background:#222; height:10px; border-radius:5px;">
@@ -44,6 +44,15 @@
         ">
         </div>
     </div>
+
+    <hr>
+
+    <small>
+        ⚡ ELO — {{ team_a.username }}: {{ prediction.elo_a }} |
+        {{ team_b.username }}: {{ prediction.elo_b }}<br>
+        📊 ELO Gap: {{ prediction.elo_gap }} |
+        🎯 Confidence: {{ prediction.confidence }}
+    </small>
 
 </div>
 
