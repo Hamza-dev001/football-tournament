@@ -135,6 +135,16 @@ def rules():
 
 
 # ==========================================================
+# SEASON ARCHIVE
+# ==========================================================
+
+@main.route("/seasons")
+def season_archive():
+    seasons = Season.query.order_by(Season.season_number.desc()).all()
+    return render_template("season_archive.html", seasons=seasons)
+
+
+# ==========================================================
 # GROUP FIXTURES
 # ==========================================================
 
@@ -216,9 +226,19 @@ def _build_group_table(group, season_id):
 
 @main.route("/standings")
 def standings():
-    season = get_active_season()
+    all_seasons = Season.query.order_by(Season.season_number).all()
+    requested_season_id = request.args.get("season_id", type=int)
+
+    if requested_season_id:
+        season = Season.query.get(requested_season_id)
+    else:
+        season = get_active_season()
+
     if not season:
-        return render_template("group_standings.html", standings_data=[])
+        return render_template(
+            "group_standings.html", standings_data=[],
+            all_seasons=all_seasons, selected_season=None
+        )
 
     groups = Group.query.filter_by(season_id=season.id).all()
     standings_data = []
@@ -246,7 +266,9 @@ def standings():
         standings_data=standings_data,
         top_scoring_team=top_scoring_team,
         best_defense_team=best_defense_team,
-        season=season
+        season=season,
+        all_seasons=all_seasons,
+        selected_season=season
     )
 
 
@@ -520,6 +542,7 @@ def leaderboard():
 def top_scorers():
     rows = AnalyticsService.get_top_scorers()
     return render_template("top_scorers.html", rows=rows)
+
 
 # ==========================================================
 # PREDICT

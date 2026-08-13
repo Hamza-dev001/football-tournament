@@ -1,0 +1,18 @@
+{% if all_seasons and all_seasons|length > 0 %}
+<div class="mb-3 p-3" style="border:1px solid #00f2ff55; border-radius:8px; background:#111;">
+    <label style="color:#00f2ff; font-weight:bold; margin-right:8px;">📅 Viewing Season:</label>
+    <select onchange="window.location.href=this.value" style="background:#000; color:#00f2ff; border:1px solid #00f2ff; padding:6px; border-radius:5px;">
+        {% for s in all_seasons %}
+            <option value="{{ url_for(endpoint, season_id=s.id) }}"
+                {% if selected_season and selected_season.id == s.id %}selected{% endif %}>
+                Season {{ s.season_number }}
+                {% if s.is_active %} — LIVE{% endif %}
+                {% if s.is_completed %} — Completed{% endif %}
+            </option>
+        {% endfor %}
+    </select>
+    {% if selected_season and not selected_season.is_active %}
+        <span class="badge bg-warning text-dark ms-2">📁 Viewing Archived Season (Read-Only)</span>
+    {% endif %}
+</div>
+{% endif %}

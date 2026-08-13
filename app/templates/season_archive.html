@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2 class="text-center mb-4" style="color:#00f2ff; text-shadow:0 0 8px #00f2ff;">
+    🗄 Season Archive
+</h2>
+
+<div class="card p-4">
+    {% if seasons %}
+        {% for s in seasons %}
+        <div class="mb-3 p-3" style="border:1px solid #00f2ff55; border-radius:8px; background:#111;">
+            <h4 style="margin-bottom:10px;">
+                Season {{ s.season_number }} — {{ s.name }}
+                {% if s.is_active %}
+                    <span class="badge bg-success ms-2">LIVE</span>
+                {% endif %}
+                {% if s.is_completed %}
+                    <span class="badge bg-secondary ms-2">Completed</span>
+                {% endif %}
+            </h4>
+            <a href="{{ url_for('main.standings', season_id=s.id) }}" class="btn btn-outline-info btn-sm">
+                View Standings
+            </a>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="text-center">No seasons created yet.</div>
+    {% endif %}
+</div>
+
+{% endblock %}
