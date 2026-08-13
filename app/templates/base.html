@@ -130,6 +130,12 @@
                 </li>
                 {% endif %}
 
+                {% if third_exists %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('main.third_place') }}">Third Place</a>
+                </li>
+                {% endif %}
+
                 {% if final_exists %}
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('main.final') }}">Final</a>
