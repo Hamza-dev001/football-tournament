@@ -204,20 +204,35 @@ def group_fixtures():
 # STANDINGS
 # ==========================================================
 
-def _build_group_table(group, season_id):
+def _build_group_table(group, season_id, up_to_matchday=None):
+    """
+    Builds a standings table for a group.
+
+    up_to_matchday:
+        - None (default): include ALL group matches for the season.
+          This preserves the exact original behavior used by /standings.
+        - int: include only matches where Match.matchday <= up_to_matchday.
+          Used by the Matchday Summary page to show standings "as of"
+          a specific matchday.
+    """
     table = []
     for assignment in group.assignments:
         played = wins = draws = losses = points = 0
         gf = ga = 0
 
-        matches = Match.query.filter(
+        query = Match.query.filter(
             Match.stage == "group",
             Match.season_id == season_id,
             or_(
                 Match.home_assignment_id == assignment.id,
                 Match.away_assignment_id == assignment.id
             )
-        ).all()
+        )
+
+        if up_to_matchday is not None:
+            query = query.filter(Match.matchday <= up_to_matchday)
+
+        matches = query.all()
 
         for m in matches:
             if m.home_score is None:
@@ -289,6 +304,84 @@ def standings():
         season=season,
         all_seasons=all_seasons,
         selected_season=season
+    )
+
+
+# ==========================================================
+# MATCHDAY SUMMARY
+# ==========================================================
+
+@main.route("/matchday-summary")
+def matchday_summary():
+    all_seasons = Season.query.order_by(Season.season_number).all()
+    requested_season_id = request.args.get("season_id", type=int)
+
+    if requested_season_id:
+        season = Season.query.get(requested_season_id)
+    else:
+        season = get_active_season()
+
+    if not season:
+        return render_template(
+            "matchday_summary.html",
+            all_seasons=all_seasons, selected_season=None,
+            available_matchdays=[], selected_matchday=None,
+            groups_data=[], standings_data=[]
+        )
+
+    # Only matchdays that have at least one COMPLETED group-stage match
+    completed_matchday_rows = (
+        db.session.query(Match.matchday)
+        .filter(
+            Match.season_id == season.id,
+            Match.stage == "group",
+            Match.home_score.isnot(None)
+        )
+        .distinct()
+        .all()
+    )
+    available_matchdays = sorted(
+        row[0] for row in completed_matchday_rows if row[0] is not None
+    )
+
+    requested_matchday = request.args.get("matchday", type=int)
+    if requested_matchday and requested_matchday in available_matchdays:
+        selected_matchday = requested_matchday
+    elif available_matchdays:
+        selected_matchday = max(available_matchdays)
+    else:
+        selected_matchday = None
+
+    groups = Group.query.filter_by(season_id=season.id).all()
+    groups_data = []
+    standings_data = []
+
+    if selected_matchday is not None:
+        for group in groups:
+            matches = (
+                Match.query
+                .filter_by(
+                    stage="group", group_id=group.id,
+                    season_id=season.id, matchday=selected_matchday
+                )
+                .filter(Match.home_score.isnot(None))
+                .order_by(Match.id)
+                .all()
+            )
+            groups_data.append({"group": group, "matches": matches})
+
+            table = _build_group_table(group, season.id, up_to_matchday=selected_matchday)
+            standings_data.append({"group": group, "table": table})
+
+    return render_template(
+        "matchday_summary.html",
+        all_seasons=all_seasons,
+        selected_season=season,
+        season=season,
+        available_matchdays=available_matchdays,
+        selected_matchday=selected_matchday,
+        groups_data=groups_data,
+        standings_data=standings_data
     )
 
 

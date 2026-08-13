@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2 class="text-center mb-4" style="color:#00f2ff; text-shadow:0 0 8px #00f2ff;">
+    ⚽ Matchday Summary
+</h2>
+
+{% set endpoint = "main.matchday_summary" %}
+{% include "_season_selector.html" %}
+
+{% if not selected_season %}
+    <div class="card p-4 text-center">
+        No active season.
+    </div>
+
+{% elif not available_matchdays %}
+    <div class="card p-4 text-center">
+        No completed matches yet for this season.
+    </div>
+
+{% else %}
+
+    <div class="text-center mb-4">
+        {% for md in available_matchdays %}
+            <a href="{{ url_for('main.matchday_summary', season_id=selected_season.id, matchday=md) }}"
+               class="btn {% if md == selected_matchday %}btn-info{% else %}btn-outline-info{% endif %} m-1">
+                Matchday {{ md }}
+            </a>
+        {% endfor %}
+    </div>
+
+    <h3 class="text-center mb-3" style="color:#ffc107; text-shadow:0 0 8px #ffc107;">
+        ⚽ MATCHDAY {{ selected_matchday }} RESULTS
+    </h3>
+
+    {% for item in groups_data %}
+    <div class="card p-3 mb-3">
+        <h4 class="mb-3" style="color:#00f2ff;">{{ item.group.name }}</h4>
+
+        {% if item.matches %}
+            <ul class="list-group list-group-flush">
+                {% for match in item.matches %}
+                <li class="list-group-item bg-dark text-white d-flex justify-content-between align-items-center flex-wrap">
+                    <span>{{ match.home_assignment.display_name }}</span>
+                    <span style="font-weight:bold; color:#00ff88; margin:0 10px;">
+                        {{ match.home_score }} – {{ match.away_score }}
+                    </span>
+                    <span>{{ match.away_assignment.display_name }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <div class="text-center text-muted">
+                No completed matches for this group on this matchday.
+            </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+
+    <h3 class="text-center mt-5 mb-3" style="color:#00f2ff; text-shadow:0 0 8px #00f2ff;">
+        📊 UPDATED STANDINGS
+    </h3>
+
+    {% for item in standings_data %}
+    <div class="card p-3 mb-4">
+        <h4 class="mb-3" style="color:#00f2ff;">{{ item.group.name }}</h4>
+
+        <div class="table-responsive">
+            <table class="table table-dark table-bordered text-center align-middle">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Team</th>
+                        <th>P</th>
+                        <th>W</th>
+                        <th>D</th>
+                        <th>L</th>
+                        <th>GF</th>
+                        <th>GA</th>
+                        <th>GD</th>
+                        <th>Pts</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for team in item.table %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td style="font-weight:bold;">{{ team.assignment.display_name }}</td>
+                        <td>{{ team.played }}</td>
+                        <td>{{ team.wins }}</td>
+                        <td>{{ team.draws }}</td>
+                        <td>{{ team.losses }}</td>
+                        <td style="color:#ffc107; font-weight:bold;">{{ team.gf }}</td>
+                        <td>{{ team.ga }}</td>
+                        <td>{{ team.gd }}</td>
+                        <td><strong style="color:#00f2ff;">{{ team.points }}</strong></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endfor %}
+
+{% endif %}
+
+{% endblock %}
