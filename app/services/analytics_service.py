@@ -1,4 +1,4 @@
-from ..models import Player, get_active_season
+from ..models import Player, EloHistory, get_active_season
 from .elo_engine import EloEngine
 
 
@@ -36,6 +36,25 @@ class AnalyticsService:
         return "Developing"
 
     @staticmethod
+    def get_last_3_form(player_id):
+        """
+        Returns the player's most recent 3 results as a list, e.g. ["W", "W", "L"],
+        ordered oldest to newest (so it reads left-to-right chronologically).
+        Uses EloHistory.result, which is already recorded for every processed match
+        (group and knockout). Returns an empty list if the player has no history yet.
+        """
+        rows = (
+            EloHistory.query
+            .filter_by(player_id=player_id, is_voided=False)
+            .order_by(EloHistory.created_at.desc())
+            .limit(3)
+            .all()
+        )
+        results = [row.result for row in rows]
+        results.reverse()  # oldest -> newest, left to right
+        return results
+
+    @staticmethod
     def get_power_rankings():
         """Current-season live rankings, driven by PlayerSeasonRating."""
         season = get_active_season()
@@ -62,6 +81,7 @@ class AnalyticsService:
                 "defense_rating": AnalyticsService.calculate_defense_rating(season_rating),
                 "efficiency": AnalyticsService.calculate_efficiency(season_rating),
                 "tier": AnalyticsService.assign_tier(season_rating.current_elo),
+                "form": AnalyticsService.get_last_3_form(player.id),
             })
 
         rankings.sort(key=lambda x: x["elo"], reverse=True)
