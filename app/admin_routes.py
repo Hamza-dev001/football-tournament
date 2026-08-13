@@ -39,6 +39,20 @@ def get_current_matchday():
 def is_match_locked(match):
     if session.get("override_deadline"):
         return False
+
+    # ==========================================================
+    # STAGE LOCK (FIX)
+    # Once the Round of 16 has been generated for this match's season,
+    # the ENTIRE Group Stage becomes permanently locked — regardless of
+    # matchday number or whether the season clock is running. This
+    # prevents an admin from silently editing a completed group match
+    # after qualifiers/ELO have already been computed from it.
+    # The Override button (session["override_deadline"]) still bypasses
+    # this, exactly as it already bypasses the time-based lock below.
+    # ==========================================================
+    if match.stage == "group" and stage_exists("r16", match.season_id):
+        return True
+
     if match.stage != "group":
         return False
     if not season_clock_running():
