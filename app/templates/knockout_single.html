@@ -60,9 +60,9 @@
 
     {% if is_completed %}
         {% if match.home_score > match.away_score %}
-            {% set winner = match.home_team.name %}
+            {% set winner = match.home_assignment.display_name %}
         {% elif match.away_score > match.home_score %}
-            {% set winner = match.away_team.name %}
+            {% set winner = match.away_assignment.display_name %}
         {% endif %}
     {% endif %}
 
@@ -73,7 +73,7 @@
             <div>CHAMPION</div>
         {% endif %}
 
-        <strong>{{ match.home_team.name }}</strong>
+        <strong>{{ match.home_assignment.display_name }}</strong>
 
         {% if match.is_completed %}
             {{ match.home_score }} - {{ match.away_score }}
@@ -81,7 +81,7 @@
             vs
         {% endif %}
 
-        <strong>{{ match.away_team.name }}</strong>
+        <strong>{{ match.away_assignment.display_name }}</strong>
 
         {% if is_final and is_completed %}
             <div class="mt-2">

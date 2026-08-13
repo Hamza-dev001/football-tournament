@@ -45,21 +45,21 @@ body {
         <div class="final-card">
 
             <div class="score-line">
-                <strong>{{ match.home_team.name }}</strong>
+                <strong>{{ match.home_assignment.display_name }}</strong>
                 {% if match.is_completed %}
                     {{ match.home_score }} - {{ match.away_score }}
                 {% else %}
                     vs
                 {% endif %}
-                <strong>{{ match.away_team.name }}</strong>
+                <strong>{{ match.away_assignment.display_name }}</strong>
             </div>
 
             {% if match.is_completed %}
 
                 {% if match.home_score > match.away_score %}
-                    {% set champion = match.home_team.name %}
+                    {% set champion = match.home_assignment.display_name %}
                 {% else %}
-                    {% set champion = match.away_team.name %}
+                    {% set champion = match.away_assignment.display_name %}
                 {% endif %}
 
                 <div class="champion-banner">
