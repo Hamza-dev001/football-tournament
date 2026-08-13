@@ -474,7 +474,30 @@ def final():
 
 @main.route("/bracket")
 def bracket():
-    return render_template("bracket.html")
+    season = get_active_season()
+
+    if not season:
+        return render_template(
+            "bracket.html",
+            r16_matches=[], quarter_matches=[], semi_matches=[],
+            final_matches=[], third_matches=[]
+        )
+
+    r16_matches = Match.query.filter_by(stage="r16", season_id=season.id).all()
+    quarter_matches = Match.query.filter_by(stage="quarter", season_id=season.id).all()
+    semi_matches = Match.query.filter_by(stage="semi", season_id=season.id).all()
+    final_matches = Match.query.filter_by(stage="final", season_id=season.id).all()
+    third_matches = Match.query.filter_by(stage="third", season_id=season.id).all()
+
+    return render_template(
+        "bracket.html",
+        r16_matches=r16_matches,
+        quarter_matches=quarter_matches,
+        semi_matches=semi_matches,
+        final_matches=final_matches,
+        third_matches=third_matches,
+        season=season
+    )
 
 
 # ==========================================================

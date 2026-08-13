@@ -11,7 +11,7 @@
         <h5>Round of 16</h5>
         {% for match in r16_matches %}
             <div class="mb-2">
-                {{ match.home_team.name }} vs {{ match.away_team.name }}
+                {{ match.home_assignment.display_name }} vs {{ match.away_assignment.display_name }}
             </div>
         {% else %}
             <div>No matches</div>
@@ -23,7 +23,7 @@
         <h5>Quarterfinal</h5>
         {% for match in quarter_matches %}
             <div class="mb-2">
-                {{ match.home_team.name }} vs {{ match.away_team.name }}
+                {{ match.home_assignment.display_name }} vs {{ match.away_assignment.display_name }}
             </div>
         {% else %}
             <div>No matches</div>
@@ -35,7 +35,7 @@
         <h5>Semifinal</h5>
         {% for match in semi_matches %}
             <div class="mb-2">
-                {{ match.home_team.name }} vs {{ match.away_team.name }}
+                {{ match.home_assignment.display_name }} vs {{ match.away_assignment.display_name }}
             </div>
         {% else %}
             <div>No matches</div>
@@ -47,7 +47,7 @@
         <h5>Final</h5>
         {% for match in final_matches %}
             <div class="mb-2">
-                <strong>{{ match.home_team.name }} vs {{ match.away_team.name }}</strong>
+                <strong>{{ match.home_assignment.display_name }} vs {{ match.away_assignment.display_name }}</strong>
             </div>
         {% else %}
             <div>No final yet</div>
@@ -59,7 +59,7 @@
         <h5>Third Place</h5>
         {% for match in third_matches %}
             <div class="mb-2">
-                {{ match.home_team.name }} vs {{ match.away_team.name }}
+                {{ match.home_assignment.display_name }} vs {{ match.away_assignment.display_name }}
             </div>
         {% else %}
             <div>No third place yet</div>

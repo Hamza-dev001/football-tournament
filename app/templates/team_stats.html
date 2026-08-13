@@ -52,7 +52,7 @@
                     {% else %}default-rank{% endif %}
                 ">
                     {% if loop.index == 1 %}👑 {% endif %}
-                    {{ loop.index }}. {{ team.team.name }}
+                    {{ loop.index }}. {{ team.assignment.display_name }}
                 </span>
 
                 <div class="progress-container">

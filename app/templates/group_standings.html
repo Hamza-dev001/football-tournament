@@ -13,7 +13,7 @@
             <h4>🔥 Highest Scoring Team</h4>
             <p class="mt-3">
                 <strong style="color:#00f2ff; font-size:1.4rem; text-shadow:0 0 10px #00f2ff;">
-                    {{ top_scoring_team.team.name }}
+                    {{ top_scoring_team.assignment.display_name }}
                 </strong><br>
                 <span style="color:#ffc107; font-weight:bold; font-size:1.1rem;">
                     Goals Scored: {{ top_scoring_team.gf }}
@@ -29,7 +29,7 @@
             <h4>🛡 Best Defense</h4>
             <p class="mt-3">
                 <strong style="color:#00f2ff; font-size:1.4rem; text-shadow:0 0 10px #00f2ff;">
-                    {{ best_defense_team.team.name }}
+                    {{ best_defense_team.assignment.display_name }}
                 </strong><br>
                 <span style="color:#ffc107; font-weight:bold; font-size:1.1rem;">
                     Goals Conceded: {{ best_defense_team.ga }}
@@ -74,7 +74,7 @@
                     <td>{{ loop.index }}</td>
 
                     <td style="font-weight:bold;">
-                        {{ team.team.name }}
+                        {{ team.assignment.display_name }}
 
                         {% if team.status == "qualified" %}
                             <span class="badge bg-success ms-2">Qualified</span>
