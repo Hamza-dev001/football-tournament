@@ -516,6 +516,11 @@ def leaderboard():
     return render_template("leaderboard.html", rows=rows)
 
 
+@main.route("/top-scorers")
+def top_scorers():
+    rows = AnalyticsService.get_top_scorers()
+    return render_template("top_scorers.html", rows=rows)
+
 # ==========================================================
 # PREDICT
 # ==========================================================

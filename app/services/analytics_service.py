@@ -37,12 +37,6 @@ class AnalyticsService:
 
     @staticmethod
     def get_last_3_form(player_id):
-        """
-        Returns the player's most recent 3 results as a list, e.g. ["W", "W", "L"],
-        ordered oldest to newest (so it reads left-to-right chronologically).
-        Uses EloHistory.result, which is already recorded for every processed match
-        (group and knockout). Returns an empty list if the player has no history yet.
-        """
         rows = (
             EloHistory.query
             .filter_by(player_id=player_id, is_voided=False)
@@ -51,12 +45,36 @@ class AnalyticsService:
             .all()
         )
         results = [row.result for row in rows]
-        results.reverse()  # oldest -> newest, left to right
+        results.reverse()
         return results
 
     @staticmethod
+    def get_top_scorers():
+        """
+        Current-season Top Scorers leaderboard, sorted by total goals scored.
+        Reuses PlayerSeasonRating.goals_scored — no new data source needed.
+        """
+        season = get_active_season()
+        if not season:
+            return []
+
+        rows = []
+        for player in Player.query.filter_by(status="ACTIVE").all():
+            season_rating = EloEngine.get_season_rating(player.id, season.id)
+            if season_rating.matches_played == 0:
+                continue
+            rows.append({
+                "player": player,
+                "goals_scored": season_rating.goals_scored,
+                "matches_played": season_rating.matches_played,
+                "avg_goals": round(season_rating.goals_scored / season_rating.matches_played, 2),
+            })
+
+        rows.sort(key=lambda x: x["goals_scored"], reverse=True)
+        return rows
+
+    @staticmethod
     def get_power_rankings():
-        """Current-season live rankings, driven by PlayerSeasonRating."""
         season = get_active_season()
         if not season:
             return []
@@ -89,7 +107,6 @@ class AnalyticsService:
 
     @staticmethod
     def get_career_leaderboard():
-        """All-time leaderboard, driven by PlayerCareerRating. Never resets."""
         players = Player.query.all()
         rows = []
         for player in players:
