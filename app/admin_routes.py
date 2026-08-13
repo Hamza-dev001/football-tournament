@@ -115,6 +115,7 @@ def bulk_update():
     season = get_active_season()
     matches = Match.query.filter_by(season_id=season.id).all()
     touched = []
+    rejected = []
 
     for match in matches:
         if is_match_locked(match):
@@ -124,8 +125,21 @@ def bulk_update():
         away_score = request.form.get(f"away_{match.id}")
 
         if home_score != "" and away_score != "":
-            match.home_score = int(home_score)
-            match.away_score = int(away_score)
+            home_score = int(home_score)
+            away_score = int(away_score)
+
+            # ==========================================================
+            # KNOCKOUT DRAW PROTECTION (FIX)
+            # A knockout match (any stage other than "group") must never
+            # be saved as a scoreline draw. This prevents the system from
+            # ever silently deciding a winner on a tie (e.g. 1-1).
+            # ==========================================================
+            if match.stage != "group" and home_score == away_score:
+                rejected.append((match, home_score, away_score))
+                continue
+
+            match.home_score = home_score
+            match.away_score = away_score
             match.is_completed = True
             touched.append(match)
 
@@ -133,6 +147,22 @@ def bulk_update():
 
     for match in touched:
         EloEngine.process_match(match)
+
+    if rejected:
+        lines = []
+        for m, hs, aw in rejected:
+            lines.append(
+                f"{m.home_assignment.display_name} vs {m.away_assignment.display_name} "
+                f"({m.stage}) — {hs}-{aw}"
+            )
+        message = "<br>".join(lines)
+        return (
+            f"✅ {len(touched)} match(es) saved successfully.<br><br>"
+            f"❌ The following knockout match(es) were NOT saved because they ended in a draw. "
+            f"Knockout matches cannot end in a draw — please enter the actual decisive scoreline "
+            f"(e.g. after extra time):<br><br>{message}"
+            f"<br><br><a href='{url_for('admin.dashboard')}'>⬅ Back to Dashboard</a>"
+        )
 
     return redirect(url_for("admin.dashboard"))
 
@@ -380,6 +410,20 @@ def generate_next_stage(current_stage, next_stage, use_losers=False):
         if m.home_score is None:
             return f"❌ Some matches in {current_stage} are incomplete."
 
+        # ==========================================================
+        # KNOCKOUT DRAW PROTECTION (FIX - defensive safety net)
+        # This should never trigger if bulk_update() is working correctly,
+        # since draws can no longer be saved for knockout matches. This
+        # exists purely as a safeguard against legacy/edited data.
+        # ==========================================================
+        if m.home_score == m.away_score:
+            return (
+                f"❌ Match #{m.id} in {current_stage} "
+                f"({m.home_assignment.display_name} vs {m.away_assignment.display_name}) "
+                f"is a draw ({m.home_score}-{m.away_score}). Knockout matches cannot end in a draw. "
+                f"Please correct this result before generating {next_stage}."
+            )
+
         if use_losers:
             if m.home_score > m.away_score:
                 advancing.append(m.away_assignment_id)
@@ -438,6 +482,15 @@ def award_title(match_id):
     match = Match.query.get_or_404(match_id)
     if match.stage != "final" or match.home_score is None:
         return "❌ Final not completed yet."
+
+    # ==========================================================
+    # KNOCKOUT DRAW PROTECTION (FIX)
+    # ==========================================================
+    if match.home_score == match.away_score:
+        return (
+            f"❌ The Final is a draw ({match.home_score}-{match.away_score}). "
+            f"A title cannot be awarded until a decisive result is entered."
+        )
 
     winner_player = (
         match.home_assignment.player if match.home_score > match.away_score
