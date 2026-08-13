@@ -8,13 +8,13 @@
 <div class="card p-4">
     {% for match in matches %}
         <div class="mb-4 text-center" style="font-size: 18px; color: white;">
-            <strong>{{ match.home_team.name }}</strong>
+            <strong>{{ match.home_assignment.display_name }}</strong>
             {% if match.is_completed %}
                 {{ match.home_score }} - {{ match.away_score }}
             {% else %}
                 vs
             {% endif %}
-            <strong>{{ match.away_team.name }}</strong>
+            <strong>{{ match.away_assignment.display_name }}</strong>
         </div>
     {% endfor %}
 </div>

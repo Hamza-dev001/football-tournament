@@ -12,9 +12,9 @@
                 <strong>{{ group.name }}</strong>
             </div>
             <ul class="list-group list-group-flush">
-                {% for team in group.teams %}
+                {% for assignment in group.assignments %}
                 <li class="list-group-item">
-                    {{ team.name }}
+                    {{ assignment.display_name }}
                 </li>
                 {% endfor %}
             </ul>
