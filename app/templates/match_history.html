@@ -5,6 +5,9 @@
     📜 Match History
 </h2>
 
+{% set endpoint = "main.match_history" %}
+{% include "_season_selector.html" %}
+
 <div class="card p-4">
 
     {% if matches %}

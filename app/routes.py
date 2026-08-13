@@ -21,6 +21,9 @@ main = Blueprint("main", __name__)
 # STAGE UTILITIES
 # ==========================================================
 
+STAGE_ORDER = ["group", "r16", "quarter", "semi", "third", "final"]
+
+
 def stage_exists(stage_name, season_id=None):
     season = get_active_season()
     season_id = season_id or (season.id if season else None)
@@ -60,7 +63,7 @@ def inject_stage_status():
         return {
             "r16_exists": False, "quarter_exists": False, "semi_exists": False,
             "third_exists": False, "final_exists": False,
-            "current_stage": "⚪ No Active Season", "remaining_group_matches": 0,
+            "current_stage": "âšª No Active Season", "remaining_group_matches": 0,
             "group_stage_complete": False, "group_done": False, "r16_done": False,
             "quarter_done": False, "semi_done": False, "final_done": False,
             "active_season": None,
@@ -82,17 +85,17 @@ def inject_stage_status():
             countdown_label = f"Matchday {matchday} ends in"
 
     if stage_exists("final") and stage_complete("final"):
-        current_stage = "🏆 Tournament Completed"
+        current_stage = "ðŸ† Tournament Completed"
     elif stage_exists("final"):
-        current_stage = "🔴 Final"
+        current_stage = "ðŸ”´ Final"
     elif stage_exists("semi"):
-        current_stage = "🟠 Semifinal"
+        current_stage = "ðŸŸ  Semifinal"
     elif stage_exists("quarter"):
-        current_stage = "🟣 Quarterfinal"
+        current_stage = "ðŸŸ£ Quarterfinal"
     elif stage_exists("r16"):
-        current_stage = "🔵 Round of 16"
+        current_stage = "ðŸ”µ Round of 16"
     else:
-        current_stage = "🟡 Group Stage"
+        current_stage = "ðŸŸ¡ Group Stage"
 
     group_matches = Match.query.filter_by(stage="group", season_id=season.id).all()
     remaining_group_matches = sum(1 for m in group_matches if not m.is_completed)
@@ -295,17 +298,38 @@ def standings():
 
 @main.route("/match-history")
 def match_history():
-    season = get_active_season()
+    all_seasons = Season.query.order_by(Season.season_number).all()
+    requested_season_id = request.args.get("season_id", type=int)
+
+    if requested_season_id:
+        season = Season.query.get(requested_season_id)
+    else:
+        season = get_active_season()
+
     if not season:
-        return render_template("match_history.html", matches=[])
+        return render_template(
+            "match_history.html", matches=[],
+            all_seasons=all_seasons, selected_season=None
+        )
 
     completed_matches = (
         Match.query
         .filter(Match.home_score.isnot(None), Match.season_id == season.id)
-        .order_by(Match.stage, Match.matchday, Match.id)
+        .order_by(Match.matchday, Match.id)
         .all()
     )
-    return render_template("match_history.html", matches=completed_matches, season=season)
+
+    completed_matches.sort(
+        key=lambda m: STAGE_ORDER.index(m.stage) if m.stage in STAGE_ORDER else len(STAGE_ORDER)
+    )
+
+    return render_template(
+        "match_history.html",
+        matches=completed_matches,
+        season=season,
+        all_seasons=all_seasons,
+        selected_season=season
+    )
 
 
 # ==========================================================
@@ -402,17 +426,17 @@ def player_profile(player_code):
 def setup():
     season = get_active_season()
     if not season:
-        return "❌ No active season. Create and activate one first."
+        return "âŒ No active season. Create and activate one first."
 
     if stage_exists("group", season.id):
-        return "❌ Groups already generated for this season."
+        return "âŒ Groups already generated for this season."
 
     assignments = SeasonAssignment.query.filter_by(season_id=season.id).all()
     if len(assignments) < MIN_TEAMS_PER_SEASON:
-        return f"❌ Need at least {MIN_TEAMS_PER_SEASON} assigned teams. Currently: {len(assignments)}."
+        return f"âŒ Need at least {MIN_TEAMS_PER_SEASON} assigned teams. Currently: {len(assignments)}."
 
     if not season.num_groups:
-        return "❌ Season config missing. Finalize team selection in admin first."
+        return "âŒ Season config missing. Finalize team selection in admin first."
 
     Group.query.filter_by(season_id=season.id).delete()
     db.session.commit()
@@ -433,7 +457,7 @@ def setup():
             SeasonAssignment.query.get(assignment_id).group_id = group.id
 
     db.session.commit()
-    return f"✅ {len(assignments)} teams split into {season.num_groups} groups!"
+    return f"âœ… {len(assignments)} teams split into {season.num_groups} groups!"
 
 
 # ==========================================================
@@ -445,9 +469,9 @@ def setup():
 def generate_group_fixtures():
     season = get_active_season()
     if not season:
-        return "❌ No active season."
+        return "âŒ No active season."
     if stage_exists("group", season.id):
-        return "❌ Group fixtures already generated."
+        return "âŒ Group fixtures already generated."
 
     groups = Group.query.filter_by(season_id=season.id).all()
 
@@ -469,7 +493,7 @@ def generate_group_fixtures():
                 ))
 
     db.session.commit()
-    return "✅ Group Fixtures Generated!"
+    return "âœ… Group Fixtures Generated!"
 
 
 # ==========================================================
