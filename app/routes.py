@@ -150,10 +150,21 @@ def season_archive():
 
 @main.route("/group-fixtures")
 def group_fixtures():
-    season = get_active_season()
-    if not season:
-        return render_template("group_fixtures.html", data=[])
+    all_seasons = Season.query.order_by(Season.season_number).all()
+    requested_season_id = request.args.get("season_id", type=int)
 
+    if requested_season_id:
+        season = Season.query.get(requested_season_id)
+    else:
+        season = get_active_season()
+
+    if not season:
+        return render_template(
+            "group_fixtures.html", data=[],
+            all_seasons=all_seasons, selected_season=None
+        )
+
+    is_archived = requested_season_id is not None and not season.is_active
     groups = Group.query.filter_by(season_id=season.id).all()
     data = []
 
@@ -168,16 +179,22 @@ def group_fixtures():
         for match in matches:
             matchdays.setdefault(match.matchday, []).append(match)
 
-        visible_matchdays = {}
-        for matchday in sorted(matchdays.keys()):
-            matches_in_day = matchdays[matchday]
-            visible_matchdays[matchday] = matches_in_day
-            if not all(m.is_completed for m in matches_in_day):
-                break
+        if is_archived:
+            visible_matchdays = matchdays
+        else:
+            visible_matchdays = {}
+            for matchday in sorted(matchdays.keys()):
+                matches_in_day = matchdays[matchday]
+                visible_matchdays[matchday] = matches_in_day
+                if not all(m.is_completed for m in matches_in_day):
+                    break
 
         data.append({"group": group, "matchdays": visible_matchdays})
 
-    return render_template("group_fixtures.html", data=data, season=season)
+    return render_template(
+        "group_fixtures.html", data=data, season=season,
+        all_seasons=all_seasons, selected_season=season
+    )
 
 
 # ==========================================================

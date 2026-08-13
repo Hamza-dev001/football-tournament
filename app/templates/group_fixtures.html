@@ -4,6 +4,9 @@
 
 <h2 class="text-center mb-4">📅 Group Fixtures</h2>
 
+{% set endpoint = "main.group_fixtures" %}
+{% include "_season_selector.html" %}
+
 <!-- ✅ COUNTDOWN CARD -->
 <div class="card text-center p-4 mb-4">
 
@@ -118,7 +121,6 @@ function updateCountdown() {
 
     timer.innerHTML = hours + "h " + minutes + "m " + seconds + "s";
 
-    // ✅ Last 1 hour → red glow
     if (diff <= 60 * 60 * 1000) {
         timer.style.color = "red";
         timer.style.textShadow = "0 0 15px red";
@@ -127,7 +129,6 @@ function updateCountdown() {
         timer.style.textShadow = "0 0 15px #00f2ff";
     }
 
-    // ✅ Last 10 minutes → banner + sound
     if (diff <= 10 * 60 * 1000) {
 
         banner.innerHTML =
