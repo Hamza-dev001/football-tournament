@@ -54,6 +54,18 @@ def ensure_title_awarded_column():
         )
 
 
+def ensure_notification_delivery_table():
+    """Create the approved delivery table without changing existing schema."""
+    inspector = inspect(db.engine)
+
+    if inspector.has_table("notification_delivery"):
+        return
+
+    from .models import NotificationDelivery
+
+    NotificationDelivery.__table__.create(bind=db.engine, checkfirst=True)
+
+
 # ==========================================================
 # APPLICATION FACTORY
 # ==========================================================
@@ -75,9 +87,16 @@ def create_app():
 
     # Create tables + repair additive legacy schema
     with app.app_context():
-        db.create_all()
+        # notification_delivery is created only by its explicit, idempotent
+        # migration below; do not rely on create_all() for an existing DB.
+        existing_tables = [
+            table for table in db.metadata.tables.values()
+            if table.name != "notification_delivery"
+        ]
+        db.metadata.create_all(bind=db.engine, tables=existing_tables)
 
         ensure_title_awarded_column()
+        ensure_notification_delivery_table()
 
         from .models import User
 

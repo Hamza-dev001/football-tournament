@@ -247,5 +247,26 @@ class Match(db.Model):
         return self.away_assignment.player
 
 
+class NotificationDelivery(db.Model):
+    """Persistent WhatsApp delivery state for a tournament event."""
+    __tablename__ = "notification_delivery"
+
+    id = db.Column(db.Integer, primary_key=True)
+    event_type = db.Column(db.String(50), nullable=False)
+    match_id = db.Column(db.Integer, db.ForeignKey("match.id"), nullable=False)
+    recipient = db.Column(db.String(50), nullable=False)
+    status = db.Column(db.String(20), nullable=False, default="pending")
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    sent_at = db.Column(db.DateTime, nullable=True)
+    error_message = db.Column(db.String(500), nullable=True)
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "event_type", "match_id", "recipient",
+            name="uq_notification_delivery_event_match_recipient"
+        ),
+    )
+
+
 def get_active_season():
     return Season.query.filter_by(is_active=True).first()

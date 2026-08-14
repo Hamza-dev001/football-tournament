@@ -11,6 +11,7 @@ from .models import (
 from . import db
 from .routes import stage_exists, stage_complete
 from .services.elo_engine import EloEngine
+from .services.notification_service import WhatsAppNotificationService
 from .services.season_manager import SeasonManager, now_lagos, next_10am_lagos
 from .services.season_setup import suggest_season_config, MIN_TEAMS_PER_SEASON
 
@@ -116,6 +117,11 @@ def _award_title_if_final(match):
     winner_player.titles_won += 1
     match.title_awarded = True
     db.session.commit()
+
+    # This helper is shared by bulk result submission and the manual award
+    # route, so a champion notification is only queued for a newly awarded
+    # title regardless of which workflow was used.
+    WhatsAppNotificationService.enqueue_champion(match.id)
 
     return f"🏆 Title awarded to {winner_player.username}!"
 
@@ -226,6 +232,12 @@ def bulk_update():
     for match in touched:
         if match.stage == "final":
             _award_title_if_final(match)
+
+    # All tournament persistence (scores, ELO, and title award) is complete
+    # before delivery is queued. The service uses an isolated background
+    # context, so an unavailable WhatsApp API cannot delay this submission.
+    for match in touched:
+        WhatsAppNotificationService.enqueue_match_result(match.id)
 
     if rejected:
         lines = []
