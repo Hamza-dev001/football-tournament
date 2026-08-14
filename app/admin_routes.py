@@ -67,6 +67,60 @@ def is_match_locked(match):
 
 
 # ==========================================================
+# AUTOMATIC TITLE AWARD (STEP 10)
+# ==========================================================
+
+def _award_title_if_final(match):
+    """
+    Shared, idempotent title-award helper.
+
+    Rules:
+    - Only operates on stage == "final".
+    - Requires a completed, decisive score (no draws).
+    - Checks match.title_awarded BEFORE touching titles_won.
+    - Increments the winner's titles_won exactly once.
+    - Sets match.title_awarded = True in the SAME commit as the
+      titles_won increment, so there is no window where one succeeds
+      without the other.
+    - Safe to call repeatedly (e.g. from bulk_update every time it
+      runs, or from the manual /admin/award-title route) — after the
+      first successful award, it always returns the "already awarded"
+      message and makes no further changes.
+
+    NOTE (documented limitation, per Step 10 scope):
+    If a Final that has ALREADY been awarded is later corrected and
+    the winner changes, this helper will NOT automatically reverse or
+    re-award the title. Reversing an already-awarded title requires an
+    explicit admin correction/reversal mechanism, which is intentionally
+    NOT implemented in this step. This mirrors the existing behavior of
+    elo_processed / EloEngine.revert_match(), which also requires an
+    explicit manual reset rather than automatic re-evaluation.
+    """
+    if match.stage != "final":
+        return None
+    if match.home_score is None or match.away_score is None:
+        return "❌ Final not completed yet."
+    if match.home_score == match.away_score:
+        return (
+            f"❌ The Final is a draw ({match.home_score}-{match.away_score}). "
+            f"A title cannot be awarded until a decisive result is entered."
+        )
+
+    if match.title_awarded:
+        return "ℹ️ Title has already been awarded for this Final. No changes made."
+
+    winner_player = (
+        match.home_assignment.player if match.home_score > match.away_score
+        else match.away_assignment.player
+    )
+    winner_player.titles_won += 1
+    match.title_awarded = True
+    db.session.commit()
+
+    return f"🏆 Title awarded to {winner_player.username}!"
+
+
+# ==========================================================
 # LOGIN / LOGOUT
 # ==========================================================
 
@@ -161,6 +215,17 @@ def bulk_update():
 
     for match in touched:
         EloEngine.process_match(match)
+
+    # ==========================================================
+    # AUTOMATIC TITLE AWARD (STEP 10)
+    # If any touched match is a completed, decisive Final, automatically
+    # award the title. _award_title_if_final() is fully idempotent, so
+    # this is safe to call every time bulk_update() runs — it will only
+    # ever award the title once per Final match.
+    # ==========================================================
+    for match in touched:
+        if match.stage == "final":
+            _award_title_if_final(match)
 
     if rejected:
         lines = []
@@ -487,32 +552,19 @@ def generate_third():
 
 
 # ==========================================================
-# AWARD TITLE
+# AWARD TITLE (MANUAL ROUTE — now uses shared idempotent helper)
 # ==========================================================
 
 @admin.route("/award-title/<int:match_id>")
 @login_required
 def award_title(match_id):
     match = Match.query.get_or_404(match_id)
-    if match.stage != "final" or match.home_score is None:
-        return "❌ Final not completed yet."
+    result = _award_title_if_final(match)
 
-    # ==========================================================
-    # KNOCKOUT DRAW PROTECTION (FIX)
-    # ==========================================================
-    if match.home_score == match.away_score:
-        return (
-            f"❌ The Final is a draw ({match.home_score}-{match.away_score}). "
-            f"A title cannot be awarded until a decisive result is entered."
-        )
+    if result is None:
+        return "❌ This match is not a Final."
 
-    winner_player = (
-        match.home_assignment.player if match.home_score > match.away_score
-        else match.away_assignment.player
-    )
-    winner_player.titles_won += 1
-    db.session.commit()
-    return f"🏆 Title awarded to {winner_player.username}!"
+    return result
 
 
 # ==========================================================

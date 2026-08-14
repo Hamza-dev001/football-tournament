@@ -224,6 +224,7 @@ class Match(db.Model):
 
     is_completed = db.Column(db.Boolean, default=False)
     elo_processed = db.Column(db.Boolean, default=False)
+    title_awarded = db.Column(db.Boolean, default=False, nullable=False)
 
     home_assignment = db.relationship("SeasonAssignment", foreign_keys=[home_assignment_id])
     away_assignment = db.relationship("SeasonAssignment", foreign_keys=[away_assignment_id])
