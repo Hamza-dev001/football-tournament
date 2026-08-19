@@ -3,80 +3,211 @@
 
 <h2 class="mb-4">🏆 Tournament Stage Control</h2>
 
-<!-- ✅ NEW: QUICK ACCESS TO PLAYER ASSIGNMENTS -->
+<!-- PLAYER ASSIGNMENTS -->
 <div class="alert alert-info d-flex justify-content-between align-items-center mb-4" role="alert">
     <strong>👥 Player Roster Management</strong>
-    <a href="{{ url_for('admin.season_entries') }}" class="btn btn-outline-light btn-sm">
+
+    <a href="{{ url_for('admin.season_entries') }}"
+       class="btn btn-outline-light btn-sm">
         Go to Player Assignments
     </a>
 </div>
 
-<!-- ✅ GROUP STAGE STATUS -->
+
+<!-- GROUP STAGE STATUS -->
 {% if context.group_complete %}
+
     <div class="alert alert-success">
         ✅ Group Stage Completed
     </div>
+
 {% else %}
+
     <div class="alert alert-warning">
         ⏳ Group Stage Not Yet Completed
     </div>
+
 {% endif %}
 
-<!-- ✅ GENERATE R16 -->
-{% if context.group_complete and not context.r16_exists %}
+
+<!-- ==========================================================
+     GENERATE FIRST KNOCKOUT STAGE
+     ========================================================== -->
+
+{% if context.group_complete
+   and not context.r16_exists
+   and not context.quarter_exists
+   and not context.semi_exists
+   and not context.final_exists %}
+
     <div class="mb-3">
-        <a href="/admin/generate-r16" class="btn btn-primary w-100">
-            🔵 Generate Round of 16
+        <a href="{{ url_for('admin.generate_next_fixtures') }}"
+           class="btn btn-primary w-100">
+
+            🔵 Generate Next Fixtures
+
         </a>
     </div>
+
 {% endif %}
 
-<!-- ✅ GENERATE QUARTER -->
-{% if r16_exists and not quarter_exists %}
+
+<!-- ==========================================================
+     GENERATE NEXT NORMAL KNOCKOUT STAGE
+     ========================================================== -->
+
+{% if context.r16_exists
+   and context.r16_complete
+   and not context.quarter_exists %}
+
     <div class="mb-3">
-        <a href="/admin/generate-quarter" class="btn btn-secondary w-100">
-            🟣 Generate Quarterfinal
+        <a href="{{ url_for('admin.generate_next_fixtures') }}"
+           class="btn btn-primary w-100">
+
+            🔵 Generate Next Fixtures
+
         </a>
     </div>
+
 {% endif %}
 
-<!-- ✅ GENERATE SEMI -->
-{% if quarter_exists and not semi_exists %}
+
+{% if context.quarter_exists
+   and context.quarter_complete
+   and not context.semi_exists %}
+
     <div class="mb-3">
-        <a href="/admin/generate-semi" class="btn btn-warning w-100 text-dark">
-            🟠 Generate Semifinal
+        <a href="{{ url_for('admin.generate_next_fixtures') }}"
+           class="btn btn-primary w-100">
+
+            🔵 Generate Next Fixtures
+
         </a>
     </div>
+
 {% endif %}
 
-<!-- ✅ GENERATE FINAL -->
-{% if semi_exists and not final_exists %}
-    <div class="mb-3">
-        <a href="/admin/generate-final" class="btn btn-danger w-100">
-            🔴 Generate Final
-        </a>
-    </div>
+
+<!-- ==========================================================
+     SEMIFINAL → FINAL + THIRD PLACE
+     ========================================================== -->
+
+{% if context.semi_exists and context.semi_complete %}
+
+    <!-- GENERATE FINAL -->
+    {% if not context.final_exists %}
+
+        <div class="mb-3">
+            <a href="{{ url_for('admin.generate_next_fixtures') }}"
+               class="btn btn-danger w-100">
+
+                🏆 Generate Final
+
+            </a>
+        </div>
+
+    {% endif %}
+
+
+    <!-- GENERATE THIRD PLACE -->
+    {% if not context.third_exists %}
+
+        <div class="mb-3">
+            <a href="{{ url_for('admin.generate_third') }}"
+               class="btn btn-info w-100 text-white">
+
+                🥉 Generate Third Place
+
+            </a>
+        </div>
+
+    {% endif %}
+
 {% endif %}
 
-<!-- ✅ GENERATE THIRD PLACE -->
-{% if semi_exists and not third_exists %}
-    <div class="mb-3">
-        <a href="/admin/generate-third" class="btn btn-info w-100 text-white">
-            🥉 Generate Third Place
-        </a>
-    </div>
-{% endif %}
 
 <hr>
+
+
+<!-- ==========================================================
+     CURRENT TOURNAMENT STATUS
+     ========================================================== -->
+
+<h4>📊 Tournament Progress</h4>
+
+<div class="list-group mt-3">
+
+    {% if context.r16_exists %}
+
+        <div class="list-group-item">
+            ✅ Round of 16 Generated
+        </div>
+
+    {% endif %}
+
+
+    {% if context.quarter_exists %}
+
+        <div class="list-group-item">
+            ✅ Quarterfinal Generated
+        </div>
+
+    {% endif %}
+
+
+    {% if context.semi_exists %}
+
+        <div class="list-group-item">
+            ✅ Semifinal Generated
+        </div>
+
+    {% endif %}
+
+
+    {% if context.final_exists %}
+
+        <div class="list-group-item">
+            🏆 Final Generated
+        </div>
+
+    {% endif %}
+
+
+    {% if context.third_exists %}
+
+        <div class="list-group-item">
+            🥉 Third Place Generated
+        </div>
+
+    {% endif %}
+
+</div>
+
+
+<hr>
+
+
+<!-- ==========================================================
+     QUALIFIED TEAMS
+     ========================================================== -->
 
 <h4>✅ Qualified Teams</h4>
 
 <ul class="list-group mt-3">
+
     {% for row in context.qualified_teams %}
+
         <li class="list-group-item bg-dark text-white">
-            {{ row.assignment.team.name }} ({{ row.assignment.player.username }}) — {{ row.group }}
+
+            {{ row.assignment.team.name }}
+            ({{ row.assignment.player.username }})
+            — {{ row.group }}
+
         </li>
+
     {% endfor %}
+
 </ul>
+
 
 {% endblock %}

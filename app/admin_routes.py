@@ -13,7 +13,9 @@ from .routes import stage_exists, stage_complete
 from .services.elo_engine import EloEngine
 from .services.notification_service import WhatsAppNotificationService
 from .services.season_manager import SeasonManager, now_lagos, next_10am_lagos
-from .services.season_setup import suggest_season_config, MIN_TEAMS_PER_SEASON
+from .services.season_setup import (
+    suggest_season_config, MIN_TEAMS_PER_SEASON, MAX_TEAMS_PER_SEASON
+)
 
 admin = Blueprint("admin", __name__)
 
@@ -332,6 +334,17 @@ def season_entries():
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         team_id = request.form.get("team_id")
+
+        # ==========================================================
+        # MAXIMUM PLAYER LIMIT (DYNAMIC 4-20 PLAYER SUPPORT)
+        # A season can never have more than MAX_TEAMS_PER_SEASON
+        # players assigned. This is checked BEFORE attempting the
+        # assignment, so no partial/invalid assignment is ever created.
+        # ==========================================================
+        current_count = SeasonAssignment.query.filter_by(season_id=season.id).count()
+        if current_count >= MAX_TEAMS_PER_SEASON:
+            return f"❌ Maximum {MAX_TEAMS_PER_SEASON} players already assigned for this season."
+
         try:
             SeasonManager.assign_player_to_club(season.id, username, int(team_id))
         except ValueError as e:
@@ -349,7 +362,8 @@ def season_entries():
         "admin_season_entries.html",
         season=season, entries=entries,
         available_clubs=available_clubs, suggested=suggested,
-        min_teams=MIN_TEAMS_PER_SEASON
+        min_teams=MIN_TEAMS_PER_SEASON,
+        max_teams=MAX_TEAMS_PER_SEASON
     )
 
 
@@ -368,6 +382,9 @@ def finalize_season_entries():
 
     if len(entries) < MIN_TEAMS_PER_SEASON:
         return f"❌ Need at least {MIN_TEAMS_PER_SEASON} teams assigned. Currently: {len(entries)}."
+
+    if len(entries) > MAX_TEAMS_PER_SEASON:
+        return f"❌ Cannot finalize — {len(entries)} teams assigned exceeds the maximum of {MAX_TEAMS_PER_SEASON}."
 
     SeasonManager.finalize_season_config(season.id, len(entries))
     return redirect(url_for("admin.dashboard"))
@@ -436,57 +453,127 @@ def overview():
     context = {
         "qualified_teams": build_group_qualifiers(),
         "group_complete": stage_complete("group"),
-        "r16_exists": stage_exists("r16")
+
+        # Knockout stage existence
+        "r16_exists": stage_exists("r16"),
+        "quarter_exists": stage_exists("quarter"),
+        "semi_exists": stage_exists("semi"),
+        "final_exists": stage_exists("final"),
+        "third_exists": stage_exists("third"),
+
+        # Knockout stage completion
+        "r16_complete": stage_complete("r16"),
+        "quarter_complete": stage_complete("quarter"),
+        "semi_complete": stage_complete("semi"),
     }
+
     return render_template("overview.html", context=context)
 
 
 # ==========================================================
-# GENERATE R16
+# DYNAMIC KNOCKOUT PROGRESSION (4-20 PLAYER SUPPORT)
+#
+# The knockout stage is NEVER hard-coded to always start at Round of 16.
+# Instead, the correct starting stage is derived from the ACTUAL number
+# of group-stage qualifiers:
+#
+#     2 qualifiers  -> Final
+#     4 qualifiers  -> Semi-final
+#     8 qualifiers  -> Quarter-final
+#    16 qualifiers  -> Round of 16
+#
+# After the first knockout stage exists, each subsequent stage is
+# generated from the winners of the previous stage, exactly as before
+# (reusing the existing generate_next_stage() winner-advancement logic).
+#
+# This function is the single source of truth for "what stage comes
+# next" — it is used by ALL FOUR of the existing button routes below,
+# so no matter which button an admin clicks, the system always
+# generates the correct stage and never a duplicate.
 # ==========================================================
 
-@admin.route("/generate-r16")
-@login_required
-def generate_r16():
-    season = get_active_season()
+KNOCKOUT_ORDER = ["r16", "quarter", "semi", "final"]
 
-    if stage_exists("r16", season.id):
-        return "❌ Round of 16 already generated."
+QUALIFIER_COUNT_TO_STAGE = {
+    2: "final",
+    4: "semi",
+    8: "quarter",
+    16: "r16",
+}
+
+
+def _determine_next_stage(season):
+    """
+    Returns (next_stage_name, qualified_list, error_message).
+
+    - If qualified_list is not None, the next stage must be built
+      directly from these group-stage qualifiers (this is the FIRST
+      knockout stage for this season).
+    - If qualified_list is None and error_message is None, the next
+      stage must be built from the winners of the last completed
+      knockout stage (use the existing generate_next_stage() helper).
+    - If error_message is set, stop and show it to the admin.
+    """
     if not stage_complete("group", season.id):
-        return "❌ Complete group stage first."
+        return None, None, "❌ Complete group stage first."
 
-    qualified = build_group_qualifiers()
+    existing_stages = [s for s in KNOCKOUT_ORDER if stage_exists(s, season.id)]
 
-    bracket_size = len(qualified)
-    if bracket_size not in (4, 8, 16, 32):
-        return f"❌ {bracket_size} qualifiers is not a clean bracket size. Adjust qualifiers/wildcards in Season Entries."
+    if not existing_stages:
+        qualified = build_group_qualifiers()
+        count = len(qualified)
+        target = QUALIFIER_COUNT_TO_STAGE.get(count)
+        if not target:
+            return None, None, (
+                f"❌ {count} qualifiers does not match a supported bracket size "
+                f"(2, 4, 8, or 16). Adjust qualifiers/wildcards in Season Entries."
+            )
+        return target, qualified, None
 
-    random.shuffle(qualified)
+    last_stage = existing_stages[-1]
+
+    if last_stage == "final":
+        return None, None, "❌ The Final has already been generated. There is no further stage."
+
+    if not stage_complete(last_stage, season.id):
+        return None, None, f"❌ Complete {last_stage} first."
+
+    next_index = KNOCKOUT_ORDER.index(last_stage) + 1
+    next_stage = KNOCKOUT_ORDER[next_index]
+    return next_stage, None, None
+
+
+def _generate_from_qualifiers(season, stage_name, qualified):
+    pool = qualified[:]
+    random.shuffle(pool)
     pairings = []
 
-    while len(qualified) >= 2:
-        team1 = qualified.pop(0)
+    while len(pool) >= 2:
+        team1 = pool.pop(0)
         opponent_index = next(
-            (i for i, t in enumerate(qualified) if t["group"] != team1["group"]), 0
+            (i for i, t in enumerate(pool) if t["group"] != team1["group"]), 0
         )
-        opponent = qualified.pop(opponent_index)
+        opponent = pool.pop(opponent_index)
         pairings.append((team1["assignment"], opponent["assignment"]))
 
     for a1, a2 in pairings:
         db.session.add(Match(
             home_assignment_id=a1.id, away_assignment_id=a2.id,
-            stage="r16", matchday=1, is_completed=False, season_id=season.id
+            stage=stage_name, matchday=1, is_completed=False, season_id=season.id
         ))
 
     db.session.commit()
-    return redirect(url_for("admin.dashboard"))
 
-
-# ==========================================================
-# GENERATE NEXT STAGE
-# ==========================================================
 
 def generate_next_stage(current_stage, next_stage, use_losers=False):
+    """
+    Generates `next_stage` from the winners (or losers) of `current_stage`.
+
+    Unchanged from before — still used for every knockout transition
+    AFTER the first stage (r16->quarter, quarter->semi, semi->final,
+    semi->third), and now also called dynamically by
+    generate_next_fixtures() below.
+    """
     season = get_active_season()
 
     if stage_exists(next_stage, season.id):
@@ -539,22 +626,62 @@ def generate_next_stage(current_stage, next_stage, use_losers=False):
     return redirect(url_for("admin.dashboard"))
 
 
+@admin.route("/generate-next-fixtures")
+@login_required
+def generate_next_fixtures():
+    """
+    Single dynamic entry point for generating the next knockout stage.
+
+    Safe to click repeatedly: it will never generate a stage that
+    already exists, and it never assumes Round of 16 comes first.
+    """
+    season = get_active_season()
+
+    next_stage, qualified, error = _determine_next_stage(season)
+    if error:
+        return error
+
+    if stage_exists(next_stage, season.id):
+        return f"❌ {next_stage} already generated."
+
+    if qualified is not None:
+        _generate_from_qualifiers(season, next_stage, qualified)
+        return redirect(url_for("admin.dashboard"))
+
+    previous_stage = KNOCKOUT_ORDER[KNOCKOUT_ORDER.index(next_stage) - 1]
+    return generate_next_stage(previous_stage, next_stage, use_losers=False)
+
+
+# ==========================================================
+# EXISTING BUTTON ROUTES (kept for backward compatibility with the
+# current dashboard template — every button now safely delegates to
+# the same dynamic engine above, so clicking ANY of these always
+# generates the correct next stage for this season, never a duplicate,
+# and never a wrongly-assumed Round of 16.
+# ==========================================================
+
+@admin.route("/generate-r16")
+@login_required
+def generate_r16():
+    return generate_next_fixtures()
+
+
 @admin.route("/generate-quarter")
 @login_required
 def generate_quarter():
-    return generate_next_stage("r16", "quarter")
+    return generate_next_fixtures()
 
 
 @admin.route("/generate-semi")
 @login_required
 def generate_semi():
-    return generate_next_stage("quarter", "semi")
+    return generate_next_fixtures()
 
 
 @admin.route("/generate-final")
 @login_required
 def generate_final():
-    return generate_next_stage("semi", "final", use_losers=False)
+    return generate_next_fixtures()
 
 
 @admin.route("/generate-third")

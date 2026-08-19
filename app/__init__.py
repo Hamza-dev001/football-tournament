@@ -1,5 +1,6 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
 from flask_login import LoginManager
 from sqlalchemy import inspect, text
 from config import Config
@@ -11,7 +12,6 @@ from config import Config
 db = SQLAlchemy()
 login_manager = LoginManager()
 
-# ✅ Tell Flask-Login where login page is
 login_manager.login_view = "admin.login"
 login_manager.login_message = "Please log in to access this page."
 
@@ -25,13 +25,7 @@ def ensure_title_awarded_column():
     Ensure the Match.title_awarded column exists in an existing database.
 
     db.create_all() creates missing tables, but it does not add new
-    columns to tables that already exist. Render's PostgreSQL database
-    may therefore still have the older Match schema.
-
-    This migration is intentionally:
-    - additive only
-    - idempotent
-    - non-destructive
+    columns to tables that already exist.
     """
 
     inspector = inspect(db.engine)
@@ -55,7 +49,8 @@ def ensure_title_awarded_column():
 
 
 def ensure_notification_delivery_table():
-    """Create the approved delivery table without changing existing schema."""
+    """Create the notification delivery table if it does not exist."""
+
     inspector = inspect(db.engine)
 
     if inspector.has_table("notification_delivery"):
@@ -63,7 +58,10 @@ def ensure_notification_delivery_table():
 
     from .models import NotificationDelivery
 
-    NotificationDelivery.__table__.create(bind=db.engine, checkfirst=True)
+    NotificationDelivery.__table__.create(
+        bind=db.engine,
+        checkfirst=True
+    )
 
 
 # ==========================================================
@@ -74,33 +72,50 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
+    CORS(app)
+
     # Initialize extensions
     db.init_app(app)
     login_manager.init_app(app)
 
-    # Register blueprints
+    # ======================================================
+    # REGISTER BLUEPRINTS
+    # ======================================================
+
     from .routes import main
     from .admin_routes import admin
+    from .api_routes import api
 
     app.register_blueprint(main)
     app.register_blueprint(admin, url_prefix="/admin")
+    app.register_blueprint(api)
 
-    # Create tables + repair additive legacy schema
+    # ======================================================
+    # DATABASE SETUP
+    # ======================================================
+
     with app.app_context():
-        # notification_delivery is created only by its explicit, idempotent
-        # migration below; do not rely on create_all() for an existing DB.
+
+        # Do not rely on create_all() for the notification table.
         existing_tables = [
-            table for table in db.metadata.tables.values()
+            table
+            for table in db.metadata.tables.values()
             if table.name != "notification_delivery"
         ]
-        db.metadata.create_all(bind=db.engine, tables=existing_tables)
+
+        db.metadata.create_all(
+            bind=db.engine,
+            tables=existing_tables
+        )
 
         ensure_title_awarded_column()
         ensure_notification_delivery_table()
 
         from .models import User
 
-        existing_admin = User.query.filter_by(username="admin").first()
+        existing_admin = User.query.filter_by(
+            username="admin"
+        ).first()
 
         if not existing_admin:
             admin_user = User(username="admin")

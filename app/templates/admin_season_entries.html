@@ -2,7 +2,12 @@
 {% block content %}
 
 <style>
-  .entries-container { max-width: 900px; margin: 0 auto; padding: 20px; }
+  .entries-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
   .neon-panel {
     background: #0d0d14;
     border: 2px solid #0ff;
@@ -11,117 +16,471 @@
     padding: 24px;
     margin-bottom: 24px;
   }
-  .neon-title { color: #ffd700; text-shadow: 0 0 10px rgba(255,215,0,0.6); margin-top: 0; }
-  .neon-label { color: #0ff; font-weight: bold; display: block; margin: 12px 0 6px; }
-  .neon-input, .neon-select {
-    width: 100%; padding: 10px; background: #000; color: #0ff;
-    border: 1px solid #0ff; border-radius: 6px; font-size: 16px;
+
+  .neon-title {
+    color: #ffd700;
+    text-shadow: 0 0 10px rgba(255,215,0,0.6);
+    margin-top: 0;
   }
+
+  .neon-label {
+    color: #0ff;
+    font-weight: bold;
+    display: block;
+    margin: 12px 0 6px;
+  }
+
+  .neon-input,
+  .neon-select {
+    width: 100%;
+    padding: 10px;
+    background: #000;
+    color: #0ff;
+    border: 1px solid #0ff;
+    border-radius: 6px;
+    font-size: 16px;
+    box-sizing: border-box;
+  }
+
   .btn-neon {
-    display: inline-block; margin-top: 16px; padding: 12px 28px;
-    background: transparent; color: #0ff; border: 2px solid #0ff;
-    border-radius: 8px; font-size: 16px; font-weight: bold;
-    cursor: pointer; text-shadow: 0 0 8px rgba(0,255,255,0.7);
+    display: inline-block;
+    margin-top: 16px;
+    padding: 12px 28px;
+    background: transparent;
+    color: #0ff;
+    border: 2px solid #0ff;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    text-shadow: 0 0 8px rgba(0,255,255,0.7);
     box-shadow: 0 0 12px rgba(0,255,255,0.4);
   }
-  .btn-neon:hover { background: rgba(0,255,255,0.12); }
+
+  .btn-neon:hover {
+    background: rgba(0,255,255,0.12);
+  }
+
   .btn-gold {
-    border-color: #ffd700; color: #ffd700;
+    border-color: #ffd700;
+    color: #ffd700;
     text-shadow: 0 0 8px rgba(255,215,0,0.7);
     box-shadow: 0 0 12px rgba(255,215,0,0.4);
   }
-  .btn-gold:hover { background: rgba(255,215,0,0.12); }
+
+  .btn-gold:hover {
+    background: rgba(255,215,0,0.12);
+  }
+
   .entry-row {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 10px 14px; margin: 8px 0;
-    background: #11111c; border: 1px solid #0ff3; border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    padding: 10px 14px;
+    margin: 8px 0;
+    background: #11111c;
+    border: 1px solid #0ff3;
+    border-radius: 8px;
     color: #eee;
   }
-  .entry-club { color: #0ff; font-weight: bold; }
-  .entry-player { color: #ffd700; }
-  .entry-code { color: #888; font-size: 13px; }
-  .remove-link { color: #ff5555; text-decoration: none; font-size: 14px; }
-  .remove-link:hover { text-shadow: 0 0 8px #ff5555; }
-  .count-badge {
-    display: inline-block; padding: 4px 14px; border: 1px solid #ffd700;
-    border-radius: 20px; color: #ffd700; font-weight: bold;
+
+  .entry-club {
+    color: #0ff;
+    font-weight: bold;
   }
-  .hint { color: #888; font-size: 14px; }
-  .config-line { color: #0ff; font-size: 17px; }
-  .next-steps a { color: #0ff; display: block; margin: 8px 0; font-size: 17px; }
+
+  .entry-player {
+    color: #ffd700;
+  }
+
+  .entry-code {
+    color: #888;
+    font-size: 13px;
+  }
+
+  .remove-link {
+    color: #ff5555;
+    text-decoration: none;
+    font-size: 14px;
+    white-space: nowrap;
+  }
+
+  .remove-link:hover {
+    text-shadow: 0 0 8px #ff5555;
+  }
+
+  .count-badge {
+    display: inline-block;
+    padding: 4px 14px;
+    border: 1px solid #ffd700;
+    border-radius: 20px;
+    color: #ffd700;
+    font-weight: bold;
+  }
+
+  .hint {
+    color: #888;
+    font-size: 14px;
+  }
+
+  .config-line {
+    color: #0ff;
+    font-size: 17px;
+    line-height: 1.6;
+  }
+
+  .next-steps a {
+    color: #0ff;
+    display: block;
+    margin: 8px 0;
+    font-size: 17px;
+  }
+
+  .next-steps a:hover {
+    color: #ffd700;
+  }
+
+  .warning {
+    color: #ffcc00;
+    font-size: 14px;
+    margin-top: 10px;
+  }
+
+  .success-info {
+    color: #00ff99;
+    font-size: 14px;
+    margin-top: 10px;
+  }
+
+  @media (max-width: 600px) {
+    .entry-row {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .remove-link {
+      align-self: flex-end;
+    }
+  }
 </style>
+
 
 <div class="entries-container">
 
-  <div class="neon-panel">
-    <h2 class="neon-title">⚽ {{ season.name }} — Player Assignments</h2>
-    <p class="hint">Type a username, pick a club, hit Assign. New usernames are registered automatically with a permanent Player ID.</p>
-    <p><span class="count-badge">{{ entries|length }} / 20 assigned</span>
-       <span class="hint">(minimum {{ min_teams }} required)</span></p>
-  </div>
-
-  {% if available_clubs %}
-  <div class="neon-panel">
-    <form method="POST">
-      <label class="neon-label">Username</label>
-      <input class="neon-input" type="text" name="username" placeholder="e.g. DREX" required>
-
-      <label class="neon-label">Club</label>
-      <select class="neon-select" name="team_id" required>
-        {% for club in available_clubs %}
-          <option value="{{ club.id }}">{{ club.name }}</option>
-        {% endfor %}
-      </select>
-
-      <button type="submit" class="btn-neon">Assign Player</button>
-    </form>
-  </div>
-  {% endif %}
+  <!-- ======================================================
+       SEASON / ROSTER HEADER
+       ====================================================== -->
 
   <div class="neon-panel">
-    <h3 class="neon-title">Current Assignments</h3>
 
-    {% if entries %}
-      {% for e in entries %}
-        <div class="entry-row">
-          <div>
-            <span class="entry-club">{{ e.team.name }}</span>
-            →
-            <span class="entry-player">{{ e.player.username }}</span>
-            <span class="entry-code">({{ e.player.player_code }})</span>
-          </div>
-          <a class="remove-link" href="{{ url_for('admin.remove_season_entry', assignment_id=e.id) }}"
-             onclick="return confirm('Remove {{ e.player.username }} from {{ e.team.name }}?')">✖ Remove</a>
-        </div>
-      {% endfor %}
+    <h2 class="neon-title">
+      ⚽ {{ season.name }} — Player Assignments
+    </h2>
+
+    <p class="hint">
+      Add the players who will participate in this tournament.
+      You can start with the expected players and make changes before
+      the season is finalized.
+    </p>
+
+    <p>
+      <span class="count-badge">
+        {{ entries|length }} / 20 assigned
+      </span>
+
+      <span class="hint">
+        (minimum {{ min_teams }} required)
+      </span>
+    </p>
+
+    {% if entries|length >= 20 %}
+      <p class="warning">
+        ⚠ Maximum roster reached. This tournament cannot have more than 20 players.
+      </p>
+    {% elif entries|length >= min_teams %}
+      <p class="success-info">
+        ✓ Minimum number reached. You can finalize the tournament now,
+        or continue adding players up to 20.
+      </p>
     {% else %}
-      <p class="hint">No players assigned yet.</p>
-    {% endif %}
-  </div>
-
-  {% if entries|length >= min_teams %}
-  <div class="neon-panel">
-    <h3 class="neon-title">Finalize Season Setup</h3>
-
-    {% if suggested %}
-      <p class="config-line">
-        Suggested structure: <b>{{ suggested.num_groups }} groups</b>,
-        top <b>{{ suggested.qualifiers_per_group }}</b> qualify per group
-        {% if suggested.wildcard_slots %}+ <b>{{ suggested.wildcard_slots }}</b> wildcard(s){% endif %}
+      <p class="hint">
+        Add at least {{ min_teams }} players to start a tournament.
+        Maximum: 20 players.
       </p>
     {% endif %}
 
-    <form method="POST" action="{{ url_for('admin.finalize_season_entries') }}">
-      <button type="submit" class="btn-neon btn-gold">✔ Confirm Roster & Lock Config</button>
-    </form>
   </div>
 
-  <div class="neon-panel next-steps">
-    <h3 class="neon-title">After Finalizing</h3>
-    <a href="{{ url_for('main.setup') }}">1️⃣ Generate Groups (/setup)</a>
-    <a href="{{ url_for('main.generate_group_fixtures') }}">2️⃣ Generate Fixtures</a>
-    <a href="{{ url_for('admin.dashboard') }}">3️⃣ Go to Admin Dashboard</a>
+
+  <!-- ======================================================
+       ADD PLAYER
+       ====================================================== -->
+
+  {% if available_clubs and entries|length < 20 %}
+
+  <div class="neon-panel">
+
+    <h3 class="neon-title">
+      Add Player
+    </h3>
+
+    <p class="hint">
+      Enter the player's username and assign a club.
+      The player will receive a permanent TFL Player ID if they
+      do not already have one.
+    </p>
+
+    <form method="POST">
+
+      <label class="neon-label">
+        Username
+      </label>
+
+      <input
+        class="neon-input"
+        type="text"
+        name="username"
+        placeholder="e.g. DREX"
+        required
+        maxlength="50"
+      >
+
+
+      <label class="neon-label">
+        Club
+      </label>
+
+      <select
+        class="neon-select"
+        name="team_id"
+        required
+      >
+
+        {% for club in available_clubs %}
+
+          <option value="{{ club.id }}">
+            {{ club.name }}
+          </option>
+
+        {% endfor %}
+
+      </select>
+
+
+      <button
+        type="submit"
+        class="btn-neon"
+      >
+        ➕ Assign Player
+      </button>
+
+    </form>
+
   </div>
+
+  {% elif entries|length >= 20 %}
+
+  <div class="neon-panel">
+
+    <h3 class="neon-title">
+      Roster Full
+    </h3>
+
+    <p class="warning">
+      The maximum of 20 players has been reached.
+    </p>
+
+  </div>
+
+  {% endif %}
+
+
+  <!-- ======================================================
+       CURRENT ASSIGNMENTS
+       ====================================================== -->
+
+  <div class="neon-panel">
+
+    <h3 class="neon-title">
+      Current Assignments
+    </h3>
+
+    {% if entries %}
+
+      {% for e in entries %}
+
+        <div class="entry-row">
+
+          <div>
+
+            <span class="entry-club">
+              {{ e.team.name }}
+            </span>
+
+            →
+
+            <span class="entry-player">
+              {{ e.player.username }}
+            </span>
+
+            <span class="entry-code">
+              ({{ e.player.player_code }})
+            </span>
+
+          </div>
+
+          <a
+            class="remove-link"
+            href="{{ url_for('admin.remove_season_entry', assignment_id=e.id) }}"
+            onclick="return confirm('Remove {{ e.player.username }} from {{ e.team.name }}?')"
+          >
+            ✖ Remove
+          </a>
+
+        </div>
+
+      {% endfor %}
+
+    {% else %}
+
+      <p class="hint">
+        No players assigned yet.
+      </p>
+
+    {% endif %}
+
+  </div>
+
+
+  <!-- ======================================================
+       TOURNAMENT STRUCTURE PREVIEW
+       ====================================================== -->
+
+  {% if entries|length >= min_teams %}
+
+  <div class="neon-panel">
+
+    <h3 class="neon-title">
+      Tournament Structure
+    </h3>
+
+    {% if suggested %}
+
+      <p class="config-line">
+
+        <b>{{ entries|length }} players</b> detected.
+
+        <br>
+
+        Suggested structure:
+
+        <b>{{ suggested.num_groups }} groups</b>
+
+        <br>
+
+        Top
+        <b>{{ suggested.qualifiers_per_group }}</b>
+        player(s) qualify from each group.
+
+        {% if suggested.wildcard_slots %}
+
+          <br>
+
+          Plus
+          <b>{{ suggested.wildcard_slots }}</b>
+          wildcard place(s).
+
+        {% endif %}
+
+        {% if suggested.knockout_stage %}
+
+          <br>
+
+          Knockout stage begins at:
+          <b>{{ suggested.knockout_stage|upper }}</b>
+
+        {% endif %}
+
+      </p>
+
+    {% else %}
+
+      <p class="hint">
+        The tournament structure will be calculated automatically
+        from the number of players you enter.
+      </p>
+
+    {% endif %}
+
+    <p class="hint">
+      The system will automatically determine the appropriate
+      group and knockout structure for the final roster size.
+      You do not need to manually choose 20 players.
+    </p>
+
+  </div>
+
+
+  <!-- ======================================================
+       FINALIZE SEASON
+       ====================================================== -->
+
+  <div class="neon-panel">
+
+    <h3 class="neon-title">
+      Finalize Season Setup
+    </h3>
+
+    <p class="hint">
+      Only finalize when you are satisfied with the roster.
+      Finalizing locks the tournament structure for this season.
+    </p>
+
+    <form
+      method="POST"
+      action="{{ url_for('admin.finalize_season_entries') }}"
+      onsubmit="return confirm(
+        'Are you sure you want to finalize this roster? The tournament structure will be locked for this season.'
+      )"
+    >
+
+      <button
+        type="submit"
+        class="btn-neon btn-gold"
+      >
+        ✔ Confirm Roster & Lock Config
+      </button>
+
+    </form>
+
+  </div>
+
+
+  <!-- ======================================================
+       NEXT STEPS
+       ====================================================== -->
+
+  <div class="neon-panel next-steps">
+
+    <h3 class="neon-title">
+      After Finalizing
+    </h3>
+
+    <a href="{{ url_for('main.setup') }}">
+      1️⃣ Generate Groups
+    </a>
+
+    <a href="{{ url_for('main.generate_group_fixtures') }}">
+      2️⃣ Generate Group Fixtures
+    </a>
+
+    <a href="{{ url_for('admin.dashboard') }}">
+      3️⃣ Go to Admin Dashboard
+    </a>
+
+  </div>
+
   {% endif %}
 
 </div>
