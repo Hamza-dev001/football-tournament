@@ -378,15 +378,125 @@ def remove_season_entry(assignment_id):
 @login_required
 def finalize_season_entries():
     season = get_active_season()
-    entries = SeasonAssignment.query.filter_by(season_id=season.id).all()
+
+    if not season:
+        return "❌ No active season."
+
+    entries = SeasonAssignment.query.filter_by(
+        season_id=season.id
+    ).all()
 
     if len(entries) < MIN_TEAMS_PER_SEASON:
-        return f"❌ Need at least {MIN_TEAMS_PER_SEASON} teams assigned. Currently: {len(entries)}."
+        return (
+            f"❌ Need at least {MIN_TEAMS_PER_SEASON} teams assigned. "
+            f"Currently: {len(entries)}."
+        )
 
     if len(entries) > MAX_TEAMS_PER_SEASON:
-        return f"❌ Cannot finalize — {len(entries)} teams assigned exceeds the maximum of {MAX_TEAMS_PER_SEASON}."
+        return (
+            f"❌ Cannot finalize — {len(entries)} teams assigned "
+            f"exceeds the maximum of {MAX_TEAMS_PER_SEASON}."
+        )
 
-    SeasonManager.finalize_season_config(season.id, len(entries))
+    # ----------------------------------------------------------
+    # FINALIZE SEASON CONFIGURATION
+    # ----------------------------------------------------------
+    config = SeasonManager.finalize_season_config(
+        season.id,
+        len(entries)
+    )
+
+    # ----------------------------------------------------------
+    # CREATE GROUPS
+    # ----------------------------------------------------------
+    existing_groups = Group.query.filter_by(
+        season_id=season.id
+    ).all()
+
+    if existing_groups:
+        return (
+            f"❌ Season {season.season_number} already has "
+            f"{len(existing_groups)} groups. No fixtures were changed."
+        )
+
+    num_groups = config["num_groups"]
+
+    group_names = [
+        chr(ord("A") + i)
+        for i in range(num_groups)
+    ]
+
+    groups = []
+
+    for group_name in group_names:
+        group = Group(
+            name=f"Group {group_name}",
+            season_id=season.id
+        )
+        db.session.add(group)
+        groups.append(group)
+
+    db.session.flush()
+
+    # ----------------------------------------------------------
+    # DISTRIBUTE THE EXISTING PLAYERS INTO GROUPS
+    # ----------------------------------------------------------
+    shuffled_entries = entries[:]
+    random.shuffle(shuffled_entries)
+
+    for index, assignment in enumerate(shuffled_entries):
+        group = groups[index % num_groups]
+        assignment.group_id = group.id
+
+    db.session.flush()
+
+    # ----------------------------------------------------------
+    # GENERATE HOME + AWAY GROUP FIXTURES
+    # ----------------------------------------------------------
+    for group in groups:
+        group_entries = [
+            assignment
+            for assignment in entries
+            if assignment.group_id == group.id
+        ]
+
+        # Every pair plays twice: home and away.
+        matchday = 1
+
+        for i in range(len(group_entries)):
+            for j in range(i + 1, len(group_entries)):
+
+                home = group_entries[i]
+                away = group_entries[j]
+
+                db.session.add(
+                    Match(
+                        season_id=season.id,
+                        home_assignment_id=home.id,
+                        away_assignment_id=away.id,
+                        stage="group",
+                        group_id=group.id,
+                        matchday=matchday,
+                        is_completed=False
+                    )
+                )
+
+                db.session.add(
+                    Match(
+                        season_id=season.id,
+                        home_assignment_id=away.id,
+                        away_assignment_id=home.id,
+                        stage="group",
+                        group_id=group.id,
+                        matchday=matchday,
+                        is_completed=False
+                    )
+                )
+
+                matchday += 1
+
+    db.session.commit()
+
     return redirect(url_for("admin.dashboard"))
 
 
